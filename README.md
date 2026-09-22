@@ -128,8 +128,8 @@
 /* ============================================================
    CONFIGURATION SUPABASE
    ============================================================ */
-const SUPABASE_URL = 'https://yxtzytmhebyndsibsadv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dHp5dG1oZWJ5bmRzaWJzYWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MDAzMjYsImV4cCI6MjEwNDE3NjMyNn0.swm8npuFdBympZHs-Zz6tKF5EspA8KZ5Nr0KptNFBfc';
+const SUPABASE_URL = 'https://wajjhfgcybipnplmjoeq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhampoZmdjeWJpcG5wbG1qb2VxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1OTkyMzgsImV4cCI6MjEwNDE3NTIzOH0.paDNHxDzWqSdLM5CiOF25roD-l0neafwrqfbh8g27dY';
 
 /* ================= I18N ================= */
 const I18N = {
@@ -155,6 +155,18 @@ const I18N = {
   cardDashDesc:{fr:'Statistiques et répartition des données.', ar:'إحصائيات وتوزيع البيانات.'},
   cardUsersTitle:{fr:'Utilisateurs', ar:'المستخدمون'},
   cardUsersDesc:{fr:'Gérer les rôles des comptes existants.', ar:'إدارة صلاحيات الحسابات الموجودة.'},
+  cardRecipientsTitle:{fr:'Destinataires du rapport', ar:'مستلمو التقرير'},
+  cardRecipientsDesc:{fr:'Gérer la liste des e-mails qui reçoivent le rapport automatique.', ar:'إدارة قائمة البريد الإلكتروني الذي يستلم التقرير التلقائي.'},
+  recipientsTitle:{fr:'Destinataires du rapport', ar:'مستلمو التقرير'},
+  recipientsBanner:{fr:'Ces adresses e-mail recevront automatiquement le rapport Contrôle Qualité, 2 fois par jour (13:10 et 21:10).', ar:'هذه العناوين تستلم تلقائياً تقرير مراقبة الجودة، مرتين يومياً (13:10 و 21:10).'},
+  addRecipientBtn:{fr:'Ajouter', ar:'إضافة'},
+  newRecipientEmail:{fr:'Adresse e-mail', ar:'البريد الإلكتروني'},
+  recipientExistsErr:{fr:'Cet e-mail est déjà dans la liste', ar:'هذا البريد موجود مسبقاً بالقائمة'},
+  recipientFieldErr:{fr:'Veuillez saisir un e-mail valide', ar:'يرجى إدخال بريد إلكتروني صحيح'},
+  recipientAddedToast:{fr:'Destinataire ajouté', ar:'تمت إضافة المستلم'},
+  recipientDeletedToast:{fr:'Destinataire supprimé', ar:'تم حذف المستلم'},
+  confirmDeleteRecipient:{fr:'Supprimer ce destinataire ?', ar:'حذف هذا المستلم؟'},
+  noRecipients:{fr:'Aucun destinataire — le rapport ne sera envoyé à personne', ar:'لا يوجد مستلمون — لن يُرسل التقرير لأحد'},
   cardCatalogTitle:{fr:'Catalogue des références', ar:'كتالوج المراجع'},
   cardCatalogDesc:{fr:'Base Ref → Désignation → Fournisseur, pour le remplissage automatique.', ar:'قاعدة المرجع ← التسمية ← المورد، للتعبئة التلقائية.'},
   cardQcEntryTitle:{fr:'Saisie contrôle', ar:'إدخال المراقبة'},
@@ -171,6 +183,7 @@ const I18N = {
   fieldQte:{fr:'Quantité', ar:'الكمية'},
   fieldLoc:{fr:'Emplacement (Location)', ar:'الموقع'},
   fieldFourn:{fr:'Fournisseur', ar:'المورد'},
+  fieldPrix:{fr:'Prix', ar:'السعر'},
   fieldUser:{fr:'Utilisateur', ar:'المستخدم'},
   fieldDate:{fr:'Date', ar:'التاريخ'},
   fieldQteControle:{fr:'Qtité contrôle', ar:'الكمية المراقَبة'},
@@ -212,6 +225,15 @@ const I18N = {
   undefinedLabel:{fr:'Non défini', ar:'غير محدد'},
   usersTitle:{fr:'Gestion des utilisateurs', ar:'إدارة المستخدمين'},
   usersBanner:{fr:'Pour créer un nouveau compte, utilisez le tableau de bord Supabase : Authentication → Users → Add user (email au format identifiant@stock.local). Il apparaîtra automatiquement ici — vous pourrez ensuite lui attribuer un rôle.', ar:'لإنشاء حساب جديد، استخدم لوحة تحكم Supabase: Authentication → Users → Add user (البريد بصيغة username@stock.local). سيظهر تلقائياً هنا وتقدر تحدد صلاحيته.'},
+  addUserBtn:{fr:'Ajouter un utilisateur', ar:'إضافة مستخدم'},
+  newUsername:{fr:'Identifiant', ar:'اسم المستخدم'},
+  newName:{fr:'Nom complet', ar:'الاسم الكامل'},
+  newPass:{fr:'Mot de passe', ar:'كلمة المرور'},
+  userFieldsErr:{fr:'Veuillez remplir tous les champs', ar:'يرجى تعبئة جميع الحقول'},
+  userPassShortErr:{fr:'Le mot de passe doit contenir au moins 9 caractères', ar:'يجب أن تحتوي كلمة المرور على 9 أحرف على الأقل'},
+  userExistsErr:{fr:'Cet identifiant existe déjà', ar:'اسم المستخدم موجود مسبقاً'},
+  userAddedToast:{fr:'Utilisateur ajouté', ar:'تمت إضافة المستخدم'},
+  userAddErrGeneric:{fr:"Échec de la création du compte", ar:'فشل إنشاء الحساب'},
   colUsername:{fr:'Identifiant', ar:'اسم المستخدم'},
   colName:{fr:'Nom', ar:'الاسم'},
   colRole:{fr:'Rôle', ar:'الصلاحية'},
@@ -241,7 +263,7 @@ function t(key){ return (I18N[key] && I18N[key][state.lang]) || key; }
 
 /* ================= STATE ================= */
 let state = {
-  view: 'login', currentUser: null, records: [], profiles: [], catalog: [], qcRecords: [],
+  view: 'login', currentUser: null, records: [], profiles: [], catalog: [], qcRecords: [], recipients: [],
   editingId: null, editingQcId: null,
   search: { lot:'', ref:'', designation:'', defaut:'', qtite:'', location:'', fournisseur:'', user:'', date:'' },
   qcSearch: { date:'', fournisseur:'', ref:'', designation:'' },
@@ -265,6 +287,11 @@ const QC_DISPLAY_COLS = [
   {key:'pourcentage', label:'fieldPourcentage', filterable:false}, ...DEFECT_COLS, {key:'user', label:'fieldUser', filterable:false},
 ];
 function qcPct(r){ return r.qteControle > 0 ? (r.qteNonOk / r.qteControle * 100) : 0; }
+function calcPrixTotal(r){
+  const cat = state.catalog.find(c => c.ref.toLowerCase() === (r.ref||'').toLowerCase());
+  const unit = cat ? Number(cat.prix)||0 : 0;
+  return r.qtite * unit;
+}
 
 /* ================= SUPABASE CLIENT ================= */
 const configOk = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.startsWith('eyJ');
@@ -305,12 +332,41 @@ async function updateRole(id, role){
   const { error } = await sb.from('profiles').update({ role }).eq('id', id);
   return !error;
 }
+async function loadRecipients(){
+  const { data, error } = await sb.from('report_recipients').select('*').order('created_at', { ascending:true });
+  state.recipients = error ? [] : data;
+}
+async function insertRecipient(email){
+  const { error } = await sb.from('report_recipients').insert({ email });
+  if(error){ showToast(error.code === '23505' ? t('recipientExistsErr') : t('connError'), true); return false; }
+  return true;
+}
+async function deleteRecipient(id){
+  const { error } = await sb.from('report_recipients').delete().eq('id', id);
+  if(error){ showToast(t('connError'), true); return false; }
+  return true;
+}
+async function createUserApi({ username, name, password, role }){
+  const { data: sessionData } = await sb.auth.getSession();
+  const token = sessionData.session ? sessionData.session.access_token : '';
+  try{
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/Create_user-ts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ username, name, password, role }),
+    });
+    const json = await res.json();
+    return json;
+  }catch(e){
+    return { ok:false, error: String(e) };
+  }
+}
 async function loadCatalog(){
   const { data, error } = await sb.from('ref_catalog').select('*').order('created_at', { ascending:true });
   state.catalog = error ? [] : data;
 }
 async function insertCatalog(c){
-  const { error } = await sb.from('ref_catalog').insert({ ref:c.ref, designation:c.designation, fournisseur:c.fournisseur });
+  const { error } = await sb.from('ref_catalog').insert({ ref:c.ref, designation:c.designation, fournisseur:c.fournisseur, prix:c.prix });
   if(error){ showToast(error.code === '23505' ? t('catalogExistsErr') : t('connError'), true); return false; }
   return true;
 }
@@ -368,6 +424,7 @@ function applyDir(){
 
 /* ================= ICONS ================= */
 const ICONS = {
+  mail: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M4 6l8 7 8-7"/></svg>`,
   entry: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg>`,
   data: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M9 10v10"/></svg>`,
   dash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="7" width="4" height="13"/><rect x="17" y="3" width="4" height="17"/></svg>`,
@@ -414,6 +471,7 @@ function render(){
   if(state.view === 'data') renderData(main);
   if(state.view === 'dashboard') renderDashboard(main);
   if(state.view === 'users') renderUsers(main);
+  if(state.view === 'recipients') renderRecipients(main);
   if(state.view === 'catalog') renderCatalog(main);
   if(state.view === 'qc-entry') renderQcEntry(main);
   if(state.view === 'qc-data') renderQcData(main);
@@ -470,10 +528,12 @@ function renderMenu(main){
       <div class="menu-card" id="card-stock">${ICONS.data}<h3>${t('moduleStockTitle')}</h3><p>${t('moduleStockDesc')}</p></div>
       <div class="menu-card" id="card-qc">${ICONS.qc}<h3>${t('moduleQcTitle')}</h3><p>${t('moduleQcDesc')}</p></div>
       ${isAdmin ? `<div class="menu-card" id="card-users">${ICONS.users}<h3>${t('cardUsersTitle')}</h3><p>${t('cardUsersDesc')}</p></div>` : ''}
+      ${isAdmin ? `<div class="menu-card" id="card-recipients">${ICONS.mail}<h3>${t('cardRecipientsTitle')}</h3><p>${t('cardRecipientsDesc')}</p></div>` : ''}
     </div>`;
   document.getElementById('card-stock').onclick = () => { state.view='stock-menu'; render(); };
   document.getElementById('card-qc').onclick = async () => { await loadCatalog(); await loadQcRecords(); state.view='qc-menu'; render(); };
   if(isAdmin) document.getElementById('card-users').onclick = () => { state.view='users'; render(); };
+  if(isAdmin) document.getElementById('card-recipients').onclick = async () => { await loadRecipients(); state.view='recipients'; render(); };
 }
 
 function renderStockMenu(main){
@@ -567,11 +627,11 @@ function renderData(main){
       ${state.records.length===0 ? `<div class="empty-state">${t('noRecords')}.</div>` : `
       <table>
         <thead>
-          <tr>${DATA_COLS.map(c=>`<th>${t(c.label)}</th>`).join('')}<th></th></tr>
-          <tr class="filter-row">${DATA_COLS.map(c=>`<th><input class="col-search" data-key="${c.key}" placeholder="${t(c.label)}" value="${escAttr(state.search[c.key]||'')}"></th>`).join('')}<th></th></tr>
+          <tr>${DATA_COLS.map(c=>`<th>${t(c.label)}</th>`).join('')}<th>${t('fieldPrix')}</th><th></th></tr>
+          <tr class="filter-row">${DATA_COLS.map(c=>`<th><input class="col-search" data-key="${c.key}" placeholder="${t(c.label)}" value="${escAttr(state.search[c.key]||'')}"></th>`).join('')}<th></th><th></th></tr>
         </thead>
         <tbody id="tbody">
-          ${filtered.length===0 ? `<tr><td colspan="${DATA_COLS.length+1}" class="empty-state">${t('noRecords')}${anyFilter?t('noRecordsSearch'):''}.</td></tr>` : filtered.map(r=>renderRow(r)).join('')}
+          ${filtered.length===0 ? `<tr><td colspan="${DATA_COLS.length+2}" class="empty-state">${t('noRecords')}${anyFilter?t('noRecordsSearch'):''}.</td></tr>` : filtered.map(r=>renderRow(r)).join('')}
         </tbody>
       </table>`}
     </div>`;
@@ -624,6 +684,7 @@ function renderRow(r){
       <td><input id="e-fourn-${r.id}" value="${escAttr(r.fournisseur)}"></td>
       <td>${escHtml(r.user)}</td>
       <td><input id="e-date-${r.id}" type="date" value="${r.date}"></td>
+      <td class="num">${calcPrixTotal(r).toFixed(2)}</td>
       <td class="row-actions">
         <button class="icon-btn" id="rowsave-${r.id}" title="${t('saveBtn')}">${ICONS.check}</button>
         <button class="icon-btn del" id="del-${r.id}" title="${t('deletedToast')}">${ICONS.del}</button>
@@ -640,6 +701,7 @@ function renderRow(r){
     <td>${escHtml(r.fournisseur)||'—'}</td>
     <td>${escHtml(r.user)}</td>
     <td class="num">${r.date}</td>
+    <td class="num">${calcPrixTotal(r).toFixed(2)}</td>
     <td class="row-actions">
       <button class="icon-btn" id="edit-${r.id}" title="${t('editedToast')}">${ICONS.edit}</button>
       <button class="icon-btn del" id="del-${r.id}" title="${t('deletedToast')}">${ICONS.del}</button>
@@ -698,19 +760,21 @@ function renderCatalog(main){
         <div><label>${t('fieldRef')}</label><input id="c-ref" type="text" placeholder="REF-0001"></div>
         <div><label>${t('fieldDesig')}</label><input id="c-desig" type="text"></div>
         <div><label>${t('fieldFourn')}</label><input id="c-fourn" type="text"></div>
+        <div><label>${t('fieldPrix')}</label><input id="c-prix" type="number" min="0" step="0.01" placeholder="0.00"></div>
       </div>
       <button class="btn" id="add-catalog-btn" style="max-width:220px;">${t('addCatalogBtn')}</button>
     </div>
     <div class="table-wrap">
       ${state.catalog.length===0 ? `<div class="empty-state">${t('noCatalog')}.</div>` : `
       <table style="min-width:0;">
-        <thead><tr><th>${t('fieldRef')}</th><th>${t('fieldDesig')}</th><th>${t('fieldFourn')}</th><th></th></tr></thead>
+        <thead><tr><th>${t('fieldRef')}</th><th>${t('fieldDesig')}</th><th>${t('fieldFourn')}</th><th>${t('fieldPrix')}</th><th></th></tr></thead>
         <tbody>
           ${state.catalog.map(c => `
             <tr>
               <td class="ref-cell">${escHtml(c.ref)}</td>
               <td>${escHtml(c.designation)}</td>
               <td>${escHtml(c.fournisseur)}</td>
+              <td class="num">${Number(c.prix||0).toFixed(2)}</td>
               <td class="row-actions"><button class="icon-btn del" id="cdel-${c.id}" title="${t('deletedToast')}">${ICONS.del}</button></td>
             </tr>`).join('')}
         </tbody>
@@ -721,8 +785,9 @@ function renderCatalog(main){
     const ref = document.getElementById('c-ref').value.trim();
     const designation = document.getElementById('c-desig').value.trim();
     const fournisseur = document.getElementById('c-fourn').value.trim();
+    const prix = Number(document.getElementById('c-prix').value) || 0;
     if(!ref || !designation || !fournisseur){ showToast(t('catalogFieldsErr'), true); return; }
-    const ok = await insertCatalog({ ref, designation, fournisseur });
+    const ok = await insertCatalog({ ref, designation, fournisseur, prix });
     if(ok){ await loadCatalog(); showToast(t('catalogAddedToast')); renderCatalog(main); }
   };
   state.catalog.forEach(c => {
@@ -959,6 +1024,22 @@ async function renderUsers(main){
   await loadProfiles();
   main.innerHTML = `
     <div class="page-head"><h2>${ICONS.users.replace('<svg','<svg width="18" height="18"')} ${t('usersTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="form-panel" style="margin-bottom:16px;">
+      <div id="add-user-error"></div>
+      <div class="user-form">
+        <div><label>${t('newUsername')}</label><input id="u-username" type="text"></div>
+        <div><label>${t('newName')}</label><input id="u-name" type="text"></div>
+        <div><label>${t('newPass')}</label><input id="u-pass" type="text"></div>
+        <div>
+          <label>${t('colRole')}</label>
+          <select id="u-role" style="margin-bottom:16px;">
+            <option value="user">${t('roleUser')}</option>
+            <option value="admin">${t('roleAdmin')}</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" id="add-user-btn" style="max-width:220px;">${t('addUserBtn')}</button>
+    </div>
     <div class="banner">${t('usersBanner')}</div>
     <div class="table-wrap">
       <table style="min-width:0;">
@@ -982,14 +1063,78 @@ async function renderUsers(main){
   main.querySelectorAll('.role-select').forEach(sel => {
     sel.onchange = async () => { const ok = await updateRole(sel.dataset.id, sel.value); if(ok) showToast(t('roleUpdatedToast')); };
   });
+  document.getElementById('add-user-btn').onclick = async () => {
+    const username = document.getElementById('u-username').value.trim();
+    const name = document.getElementById('u-name').value.trim();
+    const password = document.getElementById('u-pass').value.trim();
+    const role = document.getElementById('u-role').value;
+    const errBox = document.getElementById('add-user-error');
+    errBox.innerHTML = '';
+    if(!username || !name || !password){ showToast(t('userFieldsErr'), true); return; }
+    if(password.length < 9){ showToast(t('userPassShortErr'), true); return; }
+    const btn = document.getElementById('add-user-btn'); btn.disabled = true;
+    const result = await createUserApi({ username, name, password, role });
+    btn.disabled = false;
+    if(result.ok){
+      showToast(t('userAddedToast'));
+      renderUsers(main);
+    }else if(result.error && (result.error.includes('already been registered') || result.error.includes('duplicate'))){
+      showToast(t('userExistsErr'), true);
+    }else{
+      showToast((result.error || t('userAddErrGeneric')) + '', true);
+    }
+  };
+}
+
+/* ================= RECIPIENTS (rapport auto par e-mail) ================= */
+function renderRecipients(main){
+  main.innerHTML = `
+    <div class="page-head"><h2>${ICONS.mail.replace('<svg','<svg width="18" height="18"')} ${t('recipientsTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="banner">${t('recipientsBanner')}</div>
+    <div class="form-panel" style="margin-bottom:16px;">
+      <div class="user-form" style="grid-template-columns:1fr auto;">
+        <div><label>${t('newRecipientEmail')}</label><input id="r-email" type="email" placeholder="nom@exemple.com"></div>
+      </div>
+      <button class="btn" id="add-recipient-btn" style="max-width:180px;">${t('addRecipientBtn')}</button>
+    </div>
+    <div class="table-wrap">
+      ${state.recipients.length===0 ? `<div class="empty-state">${t('noRecipients')}.</div>` : `
+      <table style="min-width:0;">
+        <thead><tr><th>${t('newRecipientEmail')}</th><th></th></tr></thead>
+        <tbody>
+          ${state.recipients.map(r => `
+            <tr>
+              <td>${escHtml(r.email)}</td>
+              <td class="row-actions"><button class="icon-btn del" id="rdel-${r.id}" title="${t('deletedToast')}">${ICONS.del}</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>`;
+  document.getElementById('back').onclick = () => { state.view='menu'; render(); };
+  document.getElementById('add-recipient-btn').onclick = async () => {
+    const email = document.getElementById('r-email').value.trim();
+    if(!email || !email.includes('@')){ showToast(t('recipientFieldErr'), true); return; }
+    const ok = await insertRecipient(email);
+    if(ok){ await loadRecipients(); showToast(t('recipientAddedToast')); renderRecipients(main); }
+  };
+  state.recipients.forEach(r => {
+    const btn = document.getElementById('rdel-'+r.id);
+    if(!btn) return;
+    btn.onclick = async () => {
+      if(confirm(t('confirmDeleteRecipient'))){
+        const ok = await deleteRecipient(r.id);
+        if(ok){ await loadRecipients(); showToast(t('recipientDeletedToast')); renderRecipients(main); }
+      }
+    };
+  });
 }
 
 /* ================= EXPORT EXCEL (Stock) ================= */
 function exportToExcel(records){
   if(!records.length){ showToast(t('noExportData'), true); return; }
-  const rows = records.map(r => ({ 'Lot': r.lot, 'Ref': r.ref, 'Désignation': r.designation, 'Défaut': r.defaut, 'Qtite': r.qtite, 'Locations': r.location, 'Fournisseur': r.fournisseur, 'User': r.user, 'Date': r.date }));
+  const rows = records.map(r => ({ 'Lot': r.lot, 'Ref': r.ref, 'Désignation': r.designation, 'Défaut': r.defaut, 'Qtite': r.qtite, 'Locations': r.location, 'Fournisseur': r.fournisseur, 'User': r.user, 'Date': r.date, 'Prix': calcPrixTotal(r).toFixed(2) }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:14},{wch:14},{wch:24},{wch:18},{wch:8},{wch:14},{wch:20},{wch:16},{wch:12}];
+  ws['!cols'] = [{wch:14},{wch:14},{wch:24},{wch:18},{wch:8},{wch:14},{wch:20},{wch:16},{wch:12},{wch:12}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Stock');
   XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,10)}.xlsx`);
