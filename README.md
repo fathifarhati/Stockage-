@@ -239,6 +239,7 @@ const I18N = {
   colRole:{fr:'Rôle', ar:'الصلاحية'},
   roleAdmin:{fr:'Administrateur', ar:'مسؤول'},
   roleUser:{fr:'Opérateur', ar:'مشغل'},
+  roleEmployee:{fr:'Employé(e)', ar:'موظف'},
   roleUpdatedToast:{fr:'Rôle mis à jour', ar:'تم تحديث الصلاحية'},
   connError:{fr:"Erreur de connexion au serveur. Vérifiez votre connexion internet.", ar:'خطأ في الاتصال بالخادم. تحقق من اتصالك بالإنترنت.'},
   configErrorTitle:{fr:'Configuration requise', ar:'الإعداد مطلوب'},
@@ -512,8 +513,13 @@ function renderLogin(){
     }
     const { data: profile } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
     state.currentUser = { id: data.user.id, username: u, name: profile ? profile.name : u, role: profile ? profile.role : 'user' };
-    state.view = 'menu';
-    await loadRecords();
+    if(state.currentUser.role === 'employee'){
+      await loadCatalog();
+      state.view = 'qc-entry';
+    }else{
+      state.view = 'menu';
+      await loadRecords();
+    }
     render();
   };
   document.getElementById('login-btn').onclick = tryLogin;
@@ -804,8 +810,9 @@ function renderCatalog(main){
 
 /* ================= QC MODULE ================= */
 function renderQcEntry(main){
+  const isEmployee = state.currentUser.role === 'employee';
   main.innerHTML = `
-    <div class="page-head"><h2>${ICONS.entry.replace('<svg','<svg width="18" height="18"')} ${t('cardQcEntryTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="page-head"><h2>${ICONS.entry.replace('<svg','<svg width="18" height="18"')} ${t('cardQcEntryTitle')}</h2>${isEmployee ? '' : `<div class="back-link" id="back">${ICONS.back} ${t('back')}</div>`}</div>
     <div class="form-panel">
       <div class="form-grid">
         <div><label>${t('fieldDate')}</label><input id="q-date" type="date" value="${todayISO()}"></div>
@@ -825,7 +832,7 @@ function renderQcEntry(main){
         <button class="btn secondary" id="clear-btn">${t('clearBtn')}</button>
       </div>
     </div>`;
-  document.getElementById('back').onclick = () => { state.view='qc-menu'; render(); };
+  if(!isEmployee) document.getElementById('back').onclick = () => { state.view='qc-menu'; render(); };
   document.getElementById('clear-btn').onclick = () => renderQcEntry(main);
   const refInput = document.getElementById('q-ref');
   refInput.addEventListener('input', () => {
@@ -1034,6 +1041,7 @@ async function renderUsers(main){
           <label>${t('colRole')}</label>
           <select id="u-role" style="margin-bottom:16px;">
             <option value="user">${t('roleUser')}</option>
+            <option value="employee">${t('roleEmployee')}</option>
             <option value="admin">${t('roleAdmin')}</option>
           </select>
         </div>
@@ -1052,6 +1060,7 @@ async function renderUsers(main){
               <td>
                 <select class="role-select" data-id="${p.id}" ${p.id===state.currentUser.id?'disabled':''} style="margin:0;padding:6px 8px;width:auto;">
                   <option value="user" ${p.role==='user'?'selected':''}>${t('roleUser')}</option>
+                  <option value="employee" ${p.role==='employee'?'selected':''}>${t('roleEmployee')}</option>
                   <option value="admin" ${p.role==='admin'?'selected':''}>${t('roleAdmin')}</option>
                 </select>
               </td>
@@ -1158,8 +1167,13 @@ function showToast(msg, isError){
   if(data.session && data.session.user){
     const { data: profile } = await sb.from('profiles').select('*').eq('id', data.session.user.id).single();
     state.currentUser = { id: data.session.user.id, username: profile ? profile.username : '', name: profile ? profile.name : '', role: profile ? profile.role : 'user' };
-    state.view = 'menu';
-    await loadRecords();
+    if(state.currentUser.role === 'employee'){
+      await loadCatalog();
+      state.view = 'qc-entry';
+    }else{
+      state.view = 'menu';
+      await loadRecords();
+    }
   }
   render();
 })();
