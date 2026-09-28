@@ -127,25 +127,8 @@
   .tile .tile-del{ position:absolute; top:4px; inset-inline-end:4px; background:transparent; border:none; color:var(--text-muted); width:22px; height:22px; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .tile .tile-del:hover{ color:var(--danger); }
   .tile .tile-del svg{ width:12px; height:12px; }
-  .debit-header{ display:flex; align-items:center; justify-content:space-between; background:var(--panel); border:1px solid var(--border); padding:14px 18px; border-radius:var(--radius); margin-bottom:14px; }
-  .debit-header .brand-mark{ font-size:20px; font-weight:700; font-family:'Space Grotesk',sans-serif; }
-  .debit-header .doc-num{ background:var(--panel-alt); border:1px solid var(--border); padding:8px 14px; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:13px; }
-  .debit-section{ border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
-  .debit-section-head{ background:var(--blue); color:#0e1a22; font-weight:700; padding:9px 14px; font-size:13px; letter-spacing:.3px; }
-  .debit-table-wrap{ overflow-x:auto; }
-  .debit-table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:560px; }
-  .debit-table th{ background:var(--panel-alt); color:var(--text-muted); font-weight:500; font-size:10.5px; text-transform:uppercase; padding:7px 8px; text-align:start; border-bottom:1px solid var(--border); white-space:nowrap; }
-  .debit-table td{ padding:5px 6px; border-bottom:1px solid var(--border); }
-  .debit-table input{ margin:0; padding:6px 7px; font-size:12.5px; width:100%; min-width:70px; }
-  .debit-table td.total-cell{ font-family:'IBM Plex Mono',monospace; text-align:end; padding-inline-end:10px; color:var(--accent); font-weight:600; white-space:nowrap; }
-  .debit-section-foot{ display:flex; justify-content:space-between; align-items:center; padding:8px 14px; background:var(--panel-alt); }
-  .debit-add-row{ background:transparent; border:none; color:var(--blue); font-size:12px; cursor:pointer; padding:6px 14px; }
-  .debit-row-del{ background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:2px; display:flex; }
-  .debit-row-del:hover{ color:var(--danger); }
-  .debit-row-del svg{ width:13px; height:13px; }
-  .debit-grand-total{ display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:2px solid var(--danger); border-radius:var(--radius); padding:14px 18px; font-size:16px; font-weight:700; font-family:'Space Grotesk',sans-serif; margin-bottom:18px; }
-  .debit-grand-total .amount{ color:var(--danger); font-family:'IBM Plex Mono',monospace; }
 </style>
+
 </head>
 <body>
 <div id="app"></div>
@@ -225,6 +208,25 @@ const I18N = {
   debitRequiredErr:{fr:'Fournisseur et cause obligatoires', ar:'المورد والسبب إلزاميان'},
   debitNoNotes:{fr:'Aucune note de débit', ar:'لا توجد مذكرات خصم'},
   debitConfirmDelete:{fr:'Supprimer cette note ?', ar:'حذف هذه المذكرة؟'},
+  debitColSite:{fr:'Lieu essai/atelier', ar:'مكان الاختبار/الورشة'},
+  debitColCarrier:{fr:'Transporteur', ar:'الناقل'},
+  debitColPerson:{fr:'Personne', ar:'الشخص'},
+  debitColHeures:{fr:'Heures', ar:'الساعات'},
+  debitColCoeff:{fr:'Coeff.', ar:'المعامل'},
+  debitColCost:{fr:'Coût', ar:'التكلفة'},
+  debitColUnitCost:{fr:'Coût unit.', ar:'تكلفة الوحدة'},
+  debitNcm:{fr:'NCM', ar:'NCM'},
+  debitCart:{fr:'Cart', ar:'Cart'},
+  debitInvoiceNumber:{fr:'Invoice N°', ar:'رقم الفاتورة'},
+  debitApprovalTitle:{fr:'APPROVAL', ar:'الموافقات'},
+  debitColRole:{fr:'Approval', ar:'الجهة'},
+  debitColWhen:{fr:'When (Date)', ar:'التاريخ'},
+  debitColComment:{fr:'Comments if refused', ar:'ملاحظات في حال الرفض'},
+  debitRolePlant:{fr:'Plant Manager / Quality Manager', ar:'مدير المصنع / مدير الجودة'},
+  debitRoleLogistic:{fr:'Logistic Manager', ar:'مدير اللوجستيك'},
+  debitRoleBuyer:{fr:'Commodity Buyer', ar:'مسؤول المشتريات'},
+  debitRoleFinance:{fr:'Finances Controller', ar:'المراقب المالي'},
+  debitRoleGeneral:{fr:'General Manager (si Total > 20 000)', ar:'المدير العام (إذا الإجمالي > 20000)'},
   uploadPdfBtn:{fr:'Téléverser un PDF', ar:'رفع ملف PDF'},
   noPdf:{fr:'Aucun fichier PDF pour le moment', ar:'لا توجد ملفات PDF حالياً'},
   confirmDeletePdf:{fr:'Supprimer ce fichier ?', ar:'حذف هذا الملف؟'},
@@ -472,6 +474,10 @@ async function getDebitPdfUrl(path){
   const { data, error } = await sb.storage.from('debit-notes').createSignedUrl(path, 3600);
   return error ? null : data.signedUrl;
 }
+async function updateDebitNotePdfPath(id, pdfPath){
+  const { error } = await sb.from('debit_notes').update({ pdf_path: pdfPath }).eq('id', id);
+  return !error;
+}
 async function createUserApi({ username, name, password, role }){
   const { data: sessionData } = await sb.auth.getSession();
   const token = sessionData.session ? sessionData.session.access_token : '';
@@ -687,7 +693,7 @@ function renderDebitMenu(main){
       <div class="menu-card" id="card-debit-list">${ICONS.data}<h3>${t('debitListTitle')}</h3><p>${t('debitListDesc')}</p></div>
     </div>
     <div class="back-link" id="back-top" style="margin-top:22px;">${ICONS.back} ${t('menuTitle')}</div>`;
-  document.getElementById('card-debit-new').onclick = async () => { await loadCatalog(); resetDebitForm(); state.view='debit-new'; render(); };
+  document.getElementById('card-debit-new').onclick = async () => { await loadCatalog(); state.view='debit-new'; render(); };
   document.getElementById('card-debit-list').onclick = async () => { await loadDebitNotes(); state.view='debit-list'; render(); };
   document.getElementById('back-top').onclick = () => { state.view='menu'; render(); };
 }
@@ -1384,169 +1390,468 @@ function renderPdfLibrary(main){
 }
 
 /* ================= DÉBIT NOTE MODULE ================= */
-const DEBIT_SECTIONS = [
-  { key:'production', label:'debitProductionCost', hasRef:false, descLabel:'debitColDesc' },
-  { key:'logistic',   label:'debitLogisticCost',   hasRef:false, descLabel:'debitColDesc' },
-  { key:'quality',    label:'debitQualityCost',    hasRef:true,  descLabel:'debitPartName' },
-  { key:'admin',      label:'debitAdminCost',      hasRef:false, descLabel:'debitColDesc' },
-];
-function emptyDebitRow(hasRef){
-  return hasRef ? { date:'', ref:'', desc:'', qty:1, price:0 } : { date:'', desc:'', qty:1, price:0 };
-}
-function resetDebitForm(){
-  state.debitForm = {
-    date: todayISO(), aswtDept: '', fournisseur: '',
-    supplierName: '', supplierMail: '', supplierPhone: '', supplierDept: '',
-    cause: '',
-    rows: {
-      production: [emptyDebitRow(false)],
-      logistic: [emptyDebitRow(false)],
-      quality: [emptyDebitRow(true)],
-      admin: [emptyDebitRow(false)],
-    },
-  };
-}
-function debitRowTotal(row){ return (Number(row.qty)||0) * (Number(row.price)||0); }
-function debitSectionTotal(sectionKey){
-  return state.debitForm.rows[sectionKey].reduce((s,r)=>s+debitRowTotal(r), 0);
-}
-function debitGrandTotal(){
-  return DEBIT_SECTIONS.reduce((s,sec)=>s+debitSectionTotal(sec.key), 0);
-}
-function fmtMoney(n){ return (Number(n)||0).toFixed(2); }
+/* ================= AUTOLIV-STYLE DÉBIT NOTE (exact template) ================= */
+const AUTOLIV_DOC_CSS = `
+.autoliv-doc-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+.autoliv-doc{background:#d8d8d8;font-family:Arial,Helvetica,sans-serif;color:#111;font-size:7px;padding:10px 0;}
+.autoliv-doc *{box-sizing:border-box}
+.autoliv-doc button{font:inherit;cursor:pointer}
+.autoliv-doc .exportBtn{margin:0;width:100%;height:6.2mm;padding:0 1mm;border:1px solid #173f91;background:#173f91;color:#fff;font-weight:bold;font-size:6.5px;white-space:nowrap;}
+.autoliv-doc .toolbar{position:sticky;top:0;z-index:20;display:flex;gap:4px;justify-content:center;background:#eee;padding:6px;margin-bottom:8px;}
+.autoliv-doc .toolbar button{padding:6px 10px;border:1px solid #777;background:#fff;font-size:11px}
+.autoliv-doc .toolbar .transfer{background:#eee04a;border-color:#b9aa18;font-weight:bold}
+.autoliv-doc .page{width:210mm;min-height:297mm;margin:10px auto;background:#fff;padding:8mm 9mm 5mm;box-shadow:0 1px 8px #888;overflow:hidden;position:relative;}
+.autoliv-doc .logo{width:34mm;margin-top:1mm}
+.autoliv-doc .logoText{font-size:21px;font-weight:bold;color:#234f91;letter-spacing:-1.5px;line-height:20px}
+.autoliv-doc .logoLine{height:2.8mm;background:#234f91;margin-top:1.5mm}
+.autoliv-doc .topArea{height:57mm;position:relative}
+.autoliv-doc .owner{position:absolute;left:0;top:30mm;width:62mm;display:grid;grid-template-columns:28mm 34mm}
+.autoliv-doc .owner div{height:5mm;border:1px solid #777;padding:1mm;font-size:7px}
+.autoliv-doc .owner .label{background:#173f91;color:#fff;font-weight:bold}
+.autoliv-doc .docbox{position:absolute;right:0;top:0;width:62mm}
+.autoliv-doc .dochead{display:grid;grid-template-columns:22mm 16mm 24mm;align-items:center}
+.autoliv-doc .doclabel{height:6.2mm;background:#173f91;color:#fff;border:1px solid #173f91;padding:1.4mm 1.5mm;font-size:7px;font-weight:bold}
+.autoliv-doc .docno{height:6.2mm;border:1px solid #777;text-align:center;font-weight:bold;font-size:10px;background:#fafafa}
+.autoliv-doc .docinfo{position:absolute;left:66mm;top:0;width:60mm}
+.autoliv-doc .docinfo table{width:100%;border-collapse:collapse}
+.autoliv-doc .docinfo td{height:4.15mm;border:1px solid #777;padding:0.5mm 1mm;font-size:6.3px}
+.autoliv-doc .docinfo td:first-child{border:0;font-weight:bold;width:28mm}
+.autoliv-doc .docinfo td:last-child{text-align:center;width:32mm}
+.autoliv-doc input,.autoliv-doc textarea,.autoliv-doc select{width:100%;min-width:0;height:100%;border:0;outline:none;background:transparent;padding:0;font:inherit;color:#111;}
+.autoliv-doc input:focus,.autoliv-doc textarea:focus{background:#fff8a8}
+.autoliv-doc input:disabled{color:#173f91;font-weight:bold;background:transparent;}
+.autoliv-doc .bar{height:5mm;background:#173f91;color:#fff;font-weight:bold;font-size:7.2px;padding:1.2mm 1.5mm;display:flex;align-items:center}
+.autoliv-doc .bar .obj{margin-left:75mm}
+.autoliv-doc .section{border:1px solid #777;border-top:0}
+.autoliv-doc table{border-collapse:collapse;width:100%;table-layout:fixed}
+.autoliv-doc th,.autoliv-doc td{border:1px solid #777;padding:0.45mm 0.8mm;height:4.3mm;font-size:6.1px;vertical-align:middle}
+.autoliv-doc th{font-weight:normal}
+.autoliv-doc .num{text-align:right}
+.autoliv-doc .totalCell{text-align:right;font-weight:bold}
+.autoliv-doc .prodArea{height:30mm;position:relative}
+.autoliv-doc .prodTable{position:absolute;right:0;top:2mm;width:101mm}
+.autoliv-doc .prodTable .lineTitle{position:absolute;left:0;top:-6mm;width:25mm;height:5mm;border:1px solid #777;text-align:center}
+.autoliv-doc .prodTable .comment{position:absolute;left:27mm;top:-5.4mm;font-size:6px}
+.autoliv-doc .logArea{height:28mm;position:relative}
+.autoliv-doc .logTable{position:absolute;left:0;top:2mm;width:82mm}
+.autoliv-doc .logRightLabel{position:absolute;left:84mm;top:1mm;font-size:6px}
+.autoliv-doc .qualityArea{height:41mm;position:relative}
+.autoliv-doc .qualityLeft{position:absolute;left:0;top:2mm;width:88mm}
+.autoliv-doc .qualityRight{position:absolute;right:0;top:2mm;width:101mm}
+.autoliv-doc .yellowBar{position:absolute;right:0;top:-5mm;width:101mm;height:5mm;background:#eee04a;border:1px solid #777;text-align:center;font-size:6px;padding:1mm}
+.autoliv-doc .qualitySub{height:5mm;display:flex;align-items:center}
+.autoliv-doc .adminArea{height:40mm;position:relative}
+.autoliv-doc .ncmBox{position:absolute;left:0;top:3mm;width:50mm}
+.autoliv-doc .ncmRow{display:flex;align-items:center;gap:4mm;margin-bottom:8mm}
+.autoliv-doc .ncmRow label{font-weight:bold;width:10mm}
+.autoliv-doc .ncmInput{width:18mm;height:5mm;border:1px solid #777;text-align:center}
+.autoliv-doc .costLabel{margin-top:1mm}
+.autoliv-doc .travel{position:absolute;right:0;top:2mm;width:83mm}
+.autoliv-doc .travelTitle{text-align:center;height:5mm}
+.autoliv-doc .materialNote{position:absolute;right:30mm;bottom:2mm;font-size:6px}
+.autoliv-doc .smallBox{position:absolute;right:0;bottom:1mm;width:13mm;height:5mm;border:1px solid #777}
+.autoliv-doc .approval td,.autoliv-doc .approval th{height:5.2mm}
+.autoliv-doc .approval .role{width:33mm}
+.autoliv-doc .approval .when{width:42mm}
+.autoliv-doc .approval .comments{width:auto}
+.autoliv-doc .approval .amount{width:25mm;text-align:center}
+.autoliv-doc .finalAmount{font-size:9px;font-weight:bold;text-align:center}
+.autoliv-doc .footer{font-size:5.7px;text-align:center;margin-top:2mm}
+`;
 
-function renderDebitSectionTable(section){
-  const rows = state.debitForm.rows[section.key];
+function debitMoney(n){ return (Number(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u20ac'; }
+function debitV(e){ return parseFloat(e && e.value) || 0; }
+
+function autolivDocMarkup(){
   return `
-    <div class="debit-section" id="debit-sec-${section.key}">
-      <div class="debit-section-head">${t(section.label)}</div>
-      <div class="debit-table-wrap">
-        <table class="debit-table">
-          <thead><tr>
-            <th>${t('debitColDate')}</th>
-            ${section.hasRef ? `<th>${t('debitPartNumber')}</th>` : ''}
-            <th>${t(section.descLabel)}</th>
-            <th>${t('debitColQty')}</th>
-            <th>${t('debitColPrice')}</th>
-            <th>${t('debitColTotal')}</th>
-            <th></th>
-          </tr></thead>
-          <tbody id="debit-rows-${section.key}">
-            ${rows.map((r,i) => `
-              <tr>
-                <td><input type="date" data-sec="${section.key}" data-i="${i}" data-f="date" value="${r.date}"></td>
-                ${section.hasRef ? `<td><input type="text" data-sec="${section.key}" data-i="${i}" data-f="ref" value="${escAttr(r.ref)}" list="debit-ref-list" placeholder="REF"></td>` : ''}
-                <td><input type="text" data-sec="${section.key}" data-i="${i}" data-f="desc" value="${escAttr(r.desc)}"></td>
-                <td><input type="number" min="0" step="0.01" data-sec="${section.key}" data-i="${i}" data-f="qty" value="${r.qty}"></td>
-                <td><input type="number" min="0" step="0.01" data-sec="${section.key}" data-i="${i}" data-f="price" value="${r.price}"></td>
-                <td class="total-cell" id="debit-total-${section.key}-${i}">${fmtMoney(debitRowTotal(r))}</td>
-                <td><button class="debit-row-del" data-sec="${section.key}" data-i="${i}" title="${t('deletedToast')}">${ICONS.del}</button></td>
-              </tr>`).join('')}
-          </tbody>
+  <div class="page" id="debit-form-capture">
+    <div class="logo"><div class="logoText">Autoliv</div><div class="logoLine"></div></div>
+    <div class="topArea">
+      <div class="owner">
+        <div class="label">${t('debitReportBy')}:</div><div><input id="a-reportby" disabled></div>
+        <div class="label">${t('debitAswt')}:</div><div><input id="a-aswt"></div>
+      </div>
+      <div class="docbox">
+        <div class="dochead">
+          <div class="doclabel">${t('debitNoteNumber')}</div>
+          <input id="a-docno" class="docno" value="\u2014" disabled>
+          <button class="exportBtn" id="a-transfer-btn">\ud83d\udcc4 ${t('debitExportBtn')}</button>
+        </div>
+      </div>
+      <div class="docinfo">
+        <table>
+          <tr><td>Date</td><td><input id="a-date" type="date"></td></tr>
+          <tr><td>SUPPLIER</td><td><input id="a-supplier" list="debit-fourn-list"></td></tr>
+          <tr><td>Supplier Contact Information</td><td></td></tr>
+          <tr><td>Name</td><td><input id="a-contact-name"></td></tr>
+          <tr><td>Mail</td><td><input id="a-contact-mail"></td></tr>
+          <tr><td>Phone</td><td><input id="a-contact-phone"></td></tr>
+          <tr><td>Department</td><td><input id="a-contact-dept"></td></tr>
+          <tr><td>Part number</td><td><input id="a-hdr-partnum"></td></tr>
+          <tr><td>Debit note N\u00b0</td><td><input id="a-hdr-debitno"></td></tr>
+          <tr><td>Part Name</td><td><input id="a-hdr-partname"></td></tr>
+          <tr><td>Cause</td><td><input id="a-cause"></td></tr>
         </table>
       </div>
-      <div class="debit-section-foot">
-        <button class="debit-add-row" data-sec="${section.key}">${t('debitAddRow')}</button>
-        <div>${t('debitSectionTotal')}: <b class="total-cell" id="debit-sectotal-${section.key}">${fmtMoney(debitSectionTotal(section.key))}</b></div>
+    </div>
+
+    <div class="bar">PRODUCTION COST <span class="obj">CB OBJECT:</span></div>
+    <div class="prodArea">
+      <div class="prodTable section">
+        <div class="lineTitle">001</div>
+        <div class="comment">Line / comment</div>
+        <table>
+          <tr><th style="width:14mm">Date</th><th>Line / comment</th><th style="width:10mm">Hours</th><th style="width:10mm">Rate</th><th style="width:12mm">Total</th></tr>
+          <tbody id="a-prod"></tbody>
+          <tr><td colspan="4" class="totalCell">Total production cost</td><td id="a-prodTotal" class="num">0.00 \u20ac</td></tr>
+        </table>
       </div>
-    </div>`;
+    </div>
+
+    <div class="bar">LOGISTIC COST <span class="obj">CB OBJECT:</span></div>
+    <div class="logArea">
+      <div class="logTable section">
+        <table>
+          <tr><th style="width:14mm">Date</th><th style="width:30mm">Carrier</th><th>Freight</th><th style="width:22mm">Cost</th></tr>
+          <tbody id="a-log"></tbody>
+          <tr><td colspan="3" class="totalCell">Total</td><td id="a-logTotal" class="num">0.00 \u20ac</td></tr>
+        </table>
+      </div>
+      <div class="logRightLabel">EUROS/Hour</div>
+    </div>
+
+    <div class="bar">QUALITY COST <span class="obj">CB OBJECT:</span></div>
+    <div class="qualityArea">
+      <div class="qualityLeft section">
+        <div class="qualitySub"><b style="margin-left:10mm">10) Scrap/rework</b><span style="margin-left:auto;margin-right:5mm">EUROS/Hour</span></div>
+        <table>
+          <tr><th style="width:27mm">Part number</th><th>Part name</th><th style="width:13mm">Hours</th><th style="width:13mm">Total</th></tr>
+          <tbody id="a-quality"></tbody>
+          <tr><td colspan="3" class="totalCell">Total</td><td id="a-qualityTotal" class="num">0.00 \u20ac</td></tr>
+        </table>
+      </div>
+      <div class="yellowBar"></div>
+      <div class="qualityRight section">
+        <table>
+          <tr><th style="width:20mm">Part nbr</th><th>Part name</th><th style="width:12mm">Quantity</th><th style="width:13mm">Unit cost</th><th style="width:13mm">Total</th></tr>
+          <tbody id="a-material"></tbody>
+          <tr><td colspan="4" class="totalCell">Total material</td><td id="a-materialTotal" class="num">0.00 \u20ac</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="bar">ADMINISTRATION COST <span class="obj">CB OBJECT:</span></div>
+    <div class="adminArea">
+      <div class="ncmBox">
+        <div class="ncmRow"><label>NCM</label><input id="a-ncm" class="ncmInput" type="number" value="0"></div>
+        <div class="costLabel">Cost</div>
+        <div style="margin-left:23mm;margin-top:-2mm;font-size:7px" id="a-adminDisplay">0</div>
+      </div>
+      <div class="travel section">
+        <div class="travelTitle">Travel expenses</div>
+        <table>
+          <tr><th style="width:14mm">Date</th><th>Person</th><th style="width:17mm">Cost</th></tr>
+          <tbody id="a-travel"></tbody>
+          <tr><td colspan="2" class="totalCell">Total</td><td id="a-travelTotal" class="num">0.00 \u20ac</td></tr>
+        </table>
+      </div>
+      <div class="materialNote">Material / rework / SCR from customer</div>
+      <div class="smallBox"></div>
+    </div>
+
+    <div class="bar">APPROVAL</div>
+    <div class="approvalArea section">
+      <table class="approval">
+        <tr><th class="role">APPROVAL</th><th class="when">WHEN</th><th class="comments">COMMENTS IF REFUSED</th><th class="amount">TOTAL</th></tr>
+        <tr><td>PLANT MANAGER / QUALITY MANAGER</td><td><input type="date"></td><td><input></td><td rowspan="1" class="finalAmount" id="a-grandTotal">0.00 \u20ac</td></tr>
+        <tr><td>LOGISTIC MANAGER</td><td><input type="date"></td><td><input></td><td rowspan="4" style="vertical-align:top;padding-top:2mm;font-weight:bold">INVOICE N\u00b0</td></tr>
+        <tr><td>COMMODITY BUYER</td><td><input type="date"></td><td><input></td></tr>
+        <tr><td>FINANCES CONTROLLER</td><td><input type="date"></td><td><input></td></tr>
+        <tr><td>GENERAL MANAGER</td><td><input type="date"></td><td><input></td></tr>
+      </table>
+    </div>
+    <div class="footer">In case of refusal, please add the justification of the refusal on the present document to the issuer.</div>
+  </div>`;
+}
+
+function debitAddRows(id, n, type, main){
+  const b = document.getElementById(id);
+  for(let i=0;i<n;i++){
+    const r = document.createElement('tr');
+    if(type==='p') r.innerHTML = '<td><input type="date"></td><td><input></td><td><input type="number" step=".001" class="a-recalc"></td><td><input type="number" step=".001" class="a-recalc"></td><td class="num rowTotal">0.00 \u20ac</td>';
+    if(type==='l') r.innerHTML = '<td><input type="date"></td><td><input></td><td><input></td><td><input type="number" step=".001" class="a-recalc"></td>';
+    if(type==='q') r.innerHTML = '<td><input class="a-quality-ref" list="debit-ref-list"></td><td><input></td><td><input type="number" step=".001" class="a-recalc"></td><td class="num qTotal">0.00 \u20ac</td>';
+    if(type==='t') r.innerHTML = '<td><input type="date"></td><td><input></td><td><input type="number" step=".001" class="a-recalc"></td>';
+    if(type==='m') r.innerHTML = '<td><input class="a-material-ref" list="debit-ref-list"></td><td><input></td><td><input type="number" step=".001" class="a-recalc"></td><td><input type="number" step=".001" class="a-recalc"></td><td class="num">0.00 \u20ac</td>';
+    b.appendChild(r);
+  }
+}
+
+function debitCalc(){
+  let p=0;
+  document.querySelectorAll('#a-prod tr').forEach(r=>{
+    const x = debitV(r.cells[2] && r.cells[2].querySelector('input')) * debitV(r.cells[3] && r.cells[3].querySelector('input'));
+    p+=x; const c=r.querySelector('.rowTotal'); if(c) c.textContent=debitMoney(x);
+  });
+  let l=0; document.querySelectorAll('#a-log input[type=number]').forEach(x=>l+=debitV(x));
+  let q=0;
+  document.querySelectorAll('#a-quality tr').forEach(r=>{
+    const x = debitV(r.cells[2] && r.cells[2].querySelector('input'));
+    q+=x; const c=r.querySelector('.qTotal'); if(c) c.textContent=debitMoney(x);
+  });
+  let material=0;
+  document.querySelectorAll('#a-material tr').forEach(r=>{
+    const qty = debitV(r.cells[2] && r.cells[2].querySelector('input'));
+    const cost = debitV(r.cells[3] && r.cells[3].querySelector('input'));
+    const x = qty*cost; material+=x;
+    const cell = r.cells[4]; if(cell) cell.textContent=debitMoney(x);
+  });
+  let tr=0; document.querySelectorAll('#a-travel input[type=number]').forEach(x=>tr+=debitV(x));
+  const a=0;
+  const total = p+l+q+material+tr+a;
+  document.getElementById('a-prodTotal').textContent = debitMoney(p);
+  document.getElementById('a-logTotal').textContent = debitMoney(l);
+  document.getElementById('a-qualityTotal').textContent = debitMoney(q);
+  document.getElementById('a-materialTotal').textContent = debitMoney(material);
+  document.getElementById('a-travelTotal').textContent = debitMoney(tr);
+  document.getElementById('a-adminDisplay').textContent = a.toFixed(0);
+  document.getElementById('a-grandTotal').textContent = debitMoney(total);
+  return { p, l, q, material, travel:tr, admin:a, total };
 }
 
 function renderDebitEntry(main){
-  if(!state.debitForm) resetDebitForm();
-  const f = state.debitForm;
   main.innerHTML = `
     <div class="page-head">
       <h2>${ICONS.debit.replace('<svg','<svg width="18" height="18"')} ${t('debitNewTitle')}</h2>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <button class="btn blue" id="export-debit-btn" style="width:auto;padding:10px 16px;">${ICONS.download} ${t('debitExportBtn')}</button>
-        <div class="back-link" id="back">${ICONS.back} ${t('back')}</div>
-      </div>
+      <div class="back-link" id="back">${ICONS.back} ${t('back')}</div>
     </div>
-    <div id="debit-form-capture">
-      <div class="debit-header">
-        <div class="brand-mark">${escHtml(f.aswtDept || t('cardDebitTitle'))}</div>
-        <div class="doc-num">${t('debitNoteNumber')}: <b>—</b></div>
-      </div>
-      <div class="form-panel" style="margin-bottom:14px;">
-        <div class="form-grid">
-          <div><label>${t('fieldDate')}</label><input id="d-date" type="date" value="${f.date}"></div>
-          <div><label>${t('debitAswt')}</label><input id="d-aswt" type="text" value="${escAttr(f.aswtDept)}"></div>
-          <div><label>${t('fieldFourn')}</label><input id="d-fourn" type="text" value="${escAttr(f.fournisseur)}" list="fourn-suggest-debit"></div>
-          <datalist id="fourn-suggest-debit">${state.catalog.map(c=>`<option value="${escAttr(c.fournisseur)}">`).join('')}</datalist>
-          <div><label>${t('debitDepartment')}</label><input id="d-suppdept" type="text" value="${escAttr(f.supplierDept)}"></div>
-          <div><label>${t('debitSupplierName')}</label><input id="d-suppname" type="text" value="${escAttr(f.supplierName)}"></div>
-          <div><label>${t('debitSupplierMail')}</label><input id="d-suppmail" type="email" value="${escAttr(f.supplierMail)}"></div>
-          <div><label>${t('debitSupplierPhone')}</label><input id="d-suppphone" type="text" value="${escAttr(f.supplierPhone)}"></div>
-          <div><label>${t('debitCause')}</label><input id="d-cause" type="text" value="${escAttr(f.cause)}"></div>
-          <div><label>${t('debitReportBy')}</label><input type="text" value="${escAttr(state.currentUser.name)}" disabled></div>
-        </div>
-      </div>
-      <datalist id="debit-ref-list">${state.catalog.map(c=>`<option value="${escAttr(c.ref)}">`).join('')}</datalist>
-      ${DEBIT_SECTIONS.map(sec => renderDebitSectionTable(sec)).join('')}
-      <div class="debit-grand-total"><span>${t('debitGrandTotal')}</span><span class="amount" id="debit-grand-total">${fmtMoney(debitGrandTotal())}</span></div>
+    <style>${AUTOLIV_DOC_CSS}</style>
+    <datalist id="debit-fourn-list">${state.catalog.map(c=>`<option value="${escAttr(c.fournisseur)}">`).join('')}</datalist>
+    <datalist id="debit-ref-list">${state.catalog.map(c=>`<option value="${escAttr(c.ref)}">`).join('')}</datalist>
+    <div class="autoliv-doc-scroll">
+      <div class="autoliv-doc">${autolivDocMarkup()}</div>
     </div>
   `;
   document.getElementById('back').onclick = () => { state.view='debit-menu'; render(); };
 
-  // header field bindings (no full re-render needed, just keep state in sync)
-  document.getElementById('d-date').oninput = e => f.date = e.target.value;
-  document.getElementById('d-aswt').oninput = e => { f.aswtDept = e.target.value; };
-  document.getElementById('d-fourn').oninput = e => f.fournisseur = e.target.value;
-  document.getElementById('d-suppdept').oninput = e => f.supplierDept = e.target.value;
-  document.getElementById('d-suppname').oninput = e => f.supplierName = e.target.value;
-  document.getElementById('d-suppmail').oninput = e => f.supplierMail = e.target.value;
-  document.getElementById('d-suppphone').oninput = e => f.supplierPhone = e.target.value;
-  document.getElementById('d-cause').oninput = e => f.cause = e.target.value;
+  debitAddRows('a-prod', 5, 'p', main);
+  debitAddRows('a-log', 4, 'l', main);
+  debitAddRows('a-quality', 5, 'q', main);
+  debitAddRows('a-material', 5, 'm', main);
+  debitAddRows('a-travel', 4, 't', main);
 
-  // row field bindings
-  main.querySelectorAll('.debit-table input').forEach(inp => {
-    inp.oninput = () => {
-      const sec = inp.dataset.sec, i = Number(inp.dataset.i), field = inp.dataset.f;
-      const row = f.rows[sec][i];
-      row[field] = (field === 'qty' || field === 'price') ? Number(inp.value) : inp.value;
-      if(field === 'ref'){
-        const match = state.catalog.find(c => c.ref.toLowerCase() === inp.value.trim().toLowerCase());
-        if(match){
-          row.desc = match.designation;
-          row.price = Number(match.prix) || row.price;
-          const descInput = main.querySelector(`input[data-sec="${sec}"][data-i="${i}"][data-f="desc"]`);
-          const priceInput = main.querySelector(`input[data-sec="${sec}"][data-i="${i}"][data-f="price"]`);
-          if(descInput) descInput.value = row.desc;
-          if(priceInput) priceInput.value = row.price;
-        }
+  document.getElementById('a-date').value = todayISO();
+  document.getElementById('a-reportby').value = state.currentUser.name;
+  document.getElementById('a-aswt').value = '';
+
+  main.addEventListener('input', (e) => {
+    if(e.target.classList.contains('a-recalc')) debitCalc();
+  });
+
+  main.querySelectorAll('.a-quality-ref').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const match = state.catalog.find(c => c.ref.toLowerCase() === inp.value.trim().toLowerCase());
+      if(match){
+        const nameInput = inp.closest('tr').cells[1].querySelector('input');
+        if(nameInput) nameInput.value = match.designation;
       }
-      if(field === 'qty' || field === 'price' || field === 'ref'){
-        document.getElementById(`debit-total-${sec}-${i}`).textContent = fmtMoney(debitRowTotal(row));
-        document.getElementById(`debit-sectotal-${sec}`).textContent = fmtMoney(debitSectionTotal(sec));
-        document.getElementById('debit-grand-total').textContent = fmtMoney(debitGrandTotal());
+    });
+  });
+  main.querySelectorAll('.a-material-ref').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const match = state.catalog.find(c => c.ref.toLowerCase() === inp.value.trim().toLowerCase());
+      if(match){
+        const tr = inp.closest('tr');
+        const nameInput = tr.cells[1].querySelector('input');
+        const costInput = tr.cells[3].querySelector('input');
+        if(nameInput) nameInput.value = match.designation;
+        if(costInput){ costInput.value = Number(match.prix)||0; }
+        debitCalc();
       }
-    };
+    });
   });
 
-  // add-row buttons
-  main.querySelectorAll('.debit-add-row').forEach(btn => {
-    btn.onclick = () => {
-      const sec = btn.dataset.sec;
-      const secConfig = DEBIT_SECTIONS.find(s=>s.key===sec);
-      f.rows[sec].push(emptyDebitRow(secConfig.hasRef));
-      renderDebitEntry(main);
-    };
+  document.getElementById('a-supplier').addEventListener('input', (e) => {
+    const match = state.catalog.find(c => c.fournisseur.toLowerCase() === e.target.value.trim().toLowerCase());
+    if(match) document.getElementById('a-hdr-partnum').value = document.getElementById('a-hdr-partnum').value || '';
   });
 
-  // delete-row buttons
-  main.querySelectorAll('.debit-row-del').forEach(btn => {
-    btn.onclick = () => {
-      const sec = btn.dataset.sec, i = Number(btn.dataset.i);
-      if(f.rows[sec].length <= 1){ f.rows[sec][i] = emptyDebitRow(DEBIT_SECTIONS.find(s=>s.key===sec).hasRef); }
-      else { f.rows[sec].splice(i,1); }
-      renderDebitEntry(main);
-    };
-  });
+  debitCalc();
 
-  document.getElementById('export-debit-btn').onclick = () => exportDebitPdf(main);
+  document.getElementById('a-transfer-btn').onclick = () => debitSaveAndTransfer(main);
 }
 
-async function exportDebitPdf(main){
-  const f = state.debitForm;
-  const fournisseur = f.fourniss
+async function debitSaveAndTransfer(main){
+  const supplier = document.getElementById('a-supplier').value.trim();
+  const cause = document.getElementById('a-cause').value.trim();
+  if(!supplier || !cause){ showToast(t('debitRequiredErr'), true); return; }
+  const btn = document.getElementById('a-transfer-btn');
+  btn.disabled = true;
+  try{
+    const totals = debitCalc();
+    const rec = {
+      note_date: document.getElementById('a-date').value,
+      aswt_department: document.getElementById('a-aswt').value.trim(),
+      fournisseur: supplier,
+      supplier_name: document.getElementById('a-contact-name').value.trim(),
+      supplier_mail: document.getElementById('a-contact-mail').value.trim(),
+      supplier_phone: document.getElementById('a-contact-phone').value.trim(),
+      supplier_department: document.getElementById('a-contact-dept').value.trim(),
+      ref: document.getElementById('a-hdr-partnum').value.trim(),
+      part_name: document.getElementById('a-hdr-partname').value.trim(),
+      cause,
+      report_raised_by: state.currentUser.name,
+      production_total: totals.p,
+      logistic_total: totals.l,
+      quality_total: totals.q + totals.material,
+      admin_total: totals.travel + totals.admin,
+      grand_total: totals.total,
+      pdf_path: null,
+      user_name: state.currentUser.name,
+    };
+    // 1) Insert first so we get the real sequential note number
+    const saved = await insertDebitNote(rec);
+    if(!saved){ showToast(t('debitExportErr'), true); return; }
+
+    // 2) Show the real number on the document before capturing it
+    document.getElementById('a-docno').value = saved.note_number;
+    const debitNoField = document.getElementById('a-hdr-debitno');
+    if(debitNoField) debitNoField.value = saved.note_number;
+
+    // 3) Capture the now-correct document as a PDF
+    const el = document.getElementById('debit-form-capture');
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    const blob = pdf.output('blob');
+
+    const folder = slugFolder(supplier);
+    const filename = `debit_${saved.note_number}_${Date.now()}.pdf`;
+    const pdfPath = await uploadDebitPdf(folder, blob, filename);
+
+    // 4) Attach the PDF path to the already-saved record
+    if(pdfPath) await updateDebitNotePdfPath(saved.id, pdfPath);
+
+    showToast(`${t('debitExportedToast')} (N\u00b0 ${saved.note_number})`);
+    renderDebitEntry(main);
+  }catch(e){
+    showToast(t('debitExportErr'), true);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+
+function renderDebitList(main){
+  main.innerHTML = `
+    <div class="page-head"><h2>${ICONS.data.replace('<svg','<svg width="18" height="18"')} ${t('debitListTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="table-wrap">
+      ${state.debitNotes.length===0 ? `<div class="empty-state">${t('debitNoNotes')}.</div>` : `
+      <table>
+        <thead><tr>
+          <th>${t('debitNoteNumber')}</th><th>${t('fieldDate')}</th><th>${t('debitAswt')}</th><th>${t('fieldFourn')}</th>
+          <th>${t('debitDepartment')}</th><th>${t('debitCause')}</th><th>TOTAL</th><th>${t('debitReportBy')}</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${state.debitNotes.map(n => `
+            <tr>
+              <td class="num">${n.note_number}</td>
+              <td class="num">${n.note_date||''}</td>
+              <td>${escHtml(n.aswt_department)||'—'}</td>
+              <td>${escHtml(n.fournisseur)}</td>
+              <td>${escHtml(n.supplier_department)||'—'}</td>
+              <td>${escHtml(n.cause)}</td>
+              <td class="num">${debitMoney(n.grand_total)}</td>
+              <td>${escHtml(n.report_raised_by)}</td>
+              <td class="row-actions">
+                <button class="icon-btn" id="dview-${n.id}" title="${t('viewBtn')}">${ICONS.download}</button>
+                ${state.currentUser.role==='admin' ? `<button class="icon-btn del" id="ddel-${n.id}" title="${t('deletedToast')}">${ICONS.del}</button>` : ''}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`}
+    </div>`;
+  document.getElementById('back').onclick = () => { state.view='debit-menu'; render(); };
+  state.debitNotes.forEach(n => {
+    const viewBtn = document.getElementById('dview-'+n.id);
+    if(viewBtn) viewBtn.onclick = async () => {
+      if(!n.pdf_path) return;
+      const url = await getDebitPdfUrl(n.pdf_path);
+      if(url) window.open(url, '_blank');
+    };
+    const delBtn = document.getElementById('ddel-'+n.id);
+    if(delBtn) delBtn.onclick = async () => {
+      if(confirm(t('debitConfirmDelete'))){
+        const ok = await deleteDebitNote(n.id, n.pdf_path);
+        if(ok){ await loadDebitNotes(); showToast(t('deletedToast')); renderDebitList(main); }
+      }
+    };
+  });
+}
+
+/* ================= EXPORT EXCEL (Stock) ================= */
+function exportToExcel(records){
+  if(!records.length){ showToast(t('noExportData'), true); return; }
+  const rows = records.map(r => ({ 'Lot': r.lot, 'Ref': r.ref, 'Désignation': r.designation, 'Défaut': r.defaut, 'Qtite': r.qtite, 'Locations': r.location, 'Fournisseur': r.fournisseur, 'User': r.user, 'Date': r.date, 'Prix': calcPrixTotal(r).toFixed(2) }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:14},{wch:14},{wch:24},{wch:18},{wch:8},{wch:14},{wch:20},{wch:16},{wch:12},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stock');
+  XLSX.writeFile(wb, `stock_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast(t('exportedToast'));
+}
+
+/* ================= HELPERS ================= */
+function escHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escAttr(s){ return escHtml(s); }
+function showToast(msg, isError){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.background = isError ? 'var(--danger)' : 'var(--ok)';
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+/* ================= INIT ================= */
+(async function init(){
+  loadLang();
+  if(!configOk){ render(); return; }
+  const { data } = await sb.auth.getSession();
+  if(data.session && data.session.user){
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', data.session.user.id).single();
+    state.currentUser = { id: data.session.user.id, username: profile ? profile.username : '', name: profile ? profile.name : '', role: profile ? profile.role : 'user' };
+    if(state.currentUser.role === 'employee'){
+      await loadCatalog();
+      state.view = 'qc-entry';
+    }else{
+      state.view = 'menu';
+      await loadRecords();
+    }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
