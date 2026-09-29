@@ -1428,17 +1428,17 @@ const AUTOLIV_DOC_CSS = `
 .autoliv-doc th{font-weight:normal}
 .autoliv-doc .num{text-align:right}
 .autoliv-doc .totalCell{text-align:right;font-weight:bold}
-.autoliv-doc .prodArea{height:30mm;position:relative}
-.autoliv-doc .prodTable{position:absolute;right:0;top:2mm;width:101mm}
+.autoliv-doc .prodArea{height:40mm;position:relative}
+.autoliv-doc .prodTable{position:absolute;right:0;top:9mm;width:101mm}
 .autoliv-doc .prodTable .lineTitle{position:absolute;left:0;top:-6mm;width:25mm;height:5mm;border:1px solid #777;text-align:center}
 .autoliv-doc .prodTable .comment{position:absolute;left:27mm;top:-5.4mm;font-size:6px}
-.autoliv-doc .logArea{height:28mm;position:relative}
+.autoliv-doc .logArea{height:32mm;position:relative}
 .autoliv-doc .logTable{position:absolute;left:0;top:2mm;width:82mm}
 .autoliv-doc .logRightLabel{position:absolute;left:84mm;top:1mm;font-size:6px}
 .autoliv-doc .qualityArea{height:41mm;position:relative}
 .autoliv-doc .qualityLeft{position:absolute;left:0;top:2mm;width:88mm}
 .autoliv-doc .qualityRight{position:absolute;right:0;top:2mm;width:101mm}
-.autoliv-doc .yellowBar{position:absolute;right:0;top:-5mm;width:101mm;height:5mm;background:#eee04a;border:1px solid #777;text-align:center;font-size:6px;padding:1mm}
+.autoliv-doc .yellowBar{position:absolute;right:0;top:-5mm;width:80mm;height:5mm;background:#eee04a;border:1px solid #777;text-align:center;font-size:6px;padding:0 1mm}
 .autoliv-doc .qualitySub{height:5mm;display:flex;align-items:center}
 .autoliv-doc .adminArea{height:40mm;position:relative}
 .autoliv-doc .ncmBox{position:absolute;left:0;top:3mm;width:50mm}
@@ -1457,6 +1457,19 @@ const AUTOLIV_DOC_CSS = `
 .autoliv-doc .approval .amount{width:25mm;text-align:center}
 .autoliv-doc .finalAmount{font-size:9px;font-weight:bold;text-align:center}
 .autoliv-doc .footer{font-size:5.7px;text-align:center;margin-top:2mm}
+
+/* --- reset: empêche les styles globaux de l'application de déformer la feuille --- */
+.autoliv-doc table{min-width:0;font-size:6.1px;table-layout:fixed;width:100%;border-collapse:collapse}
+.autoliv-doc th{background:transparent;color:#111;text-transform:none;letter-spacing:0;text-align:left;font-weight:normal;white-space:normal;font-size:6.1px;font-family:inherit}
+.autoliv-doc td{white-space:normal;font-family:inherit}
+.autoliv-doc tr:last-child td{border-bottom:1px solid #777}
+.autoliv-doc input,.autoliv-doc select,.autoliv-doc textarea{margin:0;border-radius:0;opacity:1;font-family:Arial,Helvetica,sans-serif}
+.autoliv-doc input:disabled{opacity:1}
+.autoliv-doc label{display:inline;margin:0;font-size:7px;color:#111}
+.autoliv-doc .num{font-family:Arial,Helvetica,sans-serif}
+.autoliv-doc input[type=date]:invalid:not(:focus){color:transparent}
+.autoliv-doc input[type=date]::-webkit-calendar-picker-indicator{opacity:.35;width:6px;height:6px;padding:0;margin:0}
+.autoliv-doc .ncmInput{border:1px solid #777}
 `;
 
 function debitMoney(n){ return (Number(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u20ac'; }
@@ -1464,7 +1477,7 @@ function debitV(e){ return parseFloat(e && e.value) || 0; }
 
 function autolivDocMarkup(){
   return `
-  <div class="page" id="debit-form-capture">
+<div class="page" id="debit-form-capture">
     <div class="logo"><div class="logoText">Autoliv</div><div class="logoLine"></div></div>
     <div class="topArea">
       <div class="owner">
@@ -1473,9 +1486,9 @@ function autolivDocMarkup(){
       </div>
       <div class="docbox">
         <div class="dochead">
-          <div class="doclabel">${t('debitNoteNumber')}</div>
+          <div class="doclabel">DOCUMENT N\u00b0</div>
           <input id="a-docno" class="docno" value="\u2014" disabled>
-          <button class="exportBtn" id="a-transfer-btn">\ud83d\udcc4 ${t('debitExportBtn')}</button>
+          <button class="exportBtn" id="a-transfer-btn" data-html2canvas-ignore="true">\ud83d\udcc4 ${t('debitExportBtn')}</button>
         </div>
       </div>
       <div class="docinfo">
@@ -1499,11 +1512,11 @@ function autolivDocMarkup(){
     <div class="prodArea">
       <div class="prodTable section">
         <div class="lineTitle">001</div>
-        <div class="comment">Line / comment</div>
+        <div class="comment">Line concerned</div>
         <table>
-          <tr><th style="width:14mm">Date</th><th>Line / comment</th><th style="width:10mm">Hours</th><th style="width:10mm">Rate</th><th style="width:12mm">Total</th></tr>
+          <tr><th style="width:14mm">Date</th><th>Line concerned</th><th style="width:10mm">Hours</th><th style="width:10mm">Rate</th><th style="width:12mm">Total</th></tr>
           <tbody id="a-prod"></tbody>
-          <tr><td colspan="4" class="totalCell">Total production cost</td><td id="a-prodTotal" class="num">0.00 \u20ac</td></tr>
+          <tr><td colspan="4" class="totalCell">Total machine cost</td><td id="a-prodTotal" class="num">0.00 \u20ac</td></tr>
         </table>
       </div>
     </div>
@@ -1530,7 +1543,7 @@ function autolivDocMarkup(){
           <tr><td colspan="3" class="totalCell">Total</td><td id="a-qualityTotal" class="num">0.00 \u20ac</td></tr>
         </table>
       </div>
-      <div class="yellowBar"></div>
+      <div class="yellowBar"><input id="a-yellow" placeholder=""></div>
       <div class="qualityRight section">
         <table>
           <tr><th style="width:20mm">Part nbr</th><th>Part name</th><th style="width:12mm">Quantity</th><th style="width:13mm">Unit cost</th><th style="width:13mm">Total</th></tr>
@@ -1574,6 +1587,7 @@ function autolivDocMarkup(){
   </div>`;
 }
 
+function debitMarkDates(){ document.querySelectorAll('.autoliv-doc input[type=date]').forEach(i=>{ i.required = true; }); }
 function debitAddRows(id, n, type, main){
   const b = document.getElementById(id);
   for(let i=0;i<n;i++){
@@ -1640,6 +1654,7 @@ function renderDebitEntry(main){
   debitAddRows('a-material', 5, 'm', main);
   debitAddRows('a-travel', 4, 't', main);
 
+  debitMarkDates();
   document.getElementById('a-date').value = todayISO();
   document.getElementById('a-reportby').value = state.currentUser.name;
   document.getElementById('a-aswt').value = '';
@@ -1685,6 +1700,10 @@ async function debitSaveAndTransfer(main){
   const supplier = document.getElementById('a-supplier').value.trim();
   const cause = document.getElementById('a-cause').value.trim();
   if(!supplier || !cause){ showToast(t('debitRequiredErr'), true); return; }
+  if(typeof html2canvas === 'undefined' || !window.jspdf){
+    showToast('html2canvas/jsPDF non chargés — vérifiez votre connexion internet et réessayez', true);
+    return;
+  }
   const btn = document.getElementById('a-transfer-btn');
   btn.disabled = true;
   try{
@@ -1718,13 +1737,48 @@ async function debitSaveAndTransfer(main){
     const debitNoField = document.getElementById('a-hdr-debitno');
     if(debitNoField) debitNoField.value = saved.note_number;
 
-    // 3) Capture the now-correct document as a PDF
+    // 3) Capture the now-correct document as a PDF (paginated across as many
+    //    A4 pages as needed — nothing is cropped or squeezed into one page)
     const el = document.getElementById('debit-form-capture');
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    const canvas = await html2canvas(el, {
+      scale: 2, backgroundColor: '#ffffff', useCORS: true,
+      onclone: (clonedDoc) => {
+        const original = document.getElementById('debit-form-capture');
+        const clone = clonedDoc.getElementById('debit-form-capture');
+        if(!original || !clone) return;
+        const origInputs = original.querySelectorAll('input, textarea, select');
+        const cloneInputs = clone.querySelectorAll('input, textarea, select');
+        origInputs.forEach((origEl, i) => {
+          const cloneEl = cloneInputs[i];
+          if(!cloneEl) return;
+          if(origEl.tagName === 'SELECT'){
+            const opt = cloneEl.querySelector(`option[value="${CSS.escape(origEl.value)}"]`);
+            if(opt) opt.setAttribute('selected', 'selected');
+          }else if(origEl.type === 'checkbox' || origEl.type === 'radio'){
+            if(origEl.checked) cloneEl.setAttribute('checked', 'checked');
+          }else{
+            cloneEl.setAttribute('value', origEl.value);
+            cloneEl.value = origEl.value;
+          }
+        });
+      },
+    });
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'mm', 'a4');
-    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight, position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
     const blob = pdf.output('blob');
 
     const folder = slugFolder(supplier);
@@ -1737,7 +1791,8 @@ async function debitSaveAndTransfer(main){
     showToast(`${t('debitExportedToast')} (N\u00b0 ${saved.note_number})`);
     renderDebitEntry(main);
   }catch(e){
-    showToast(t('debitExportErr'), true);
+    console.error('debitSaveAndTransfer error:', e);
+    showToast(`${t('debitExportErr')}: ${(e && e.message) || e}`, true);
   }finally{
     btn.disabled = false;
   }
@@ -1833,6 +1888,8 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
+
+
 
 
 
