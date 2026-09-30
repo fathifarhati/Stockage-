@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1633,7 +1634,39 @@ function debitCalc(){
   return { p, l, q, material, travel:tr, admin:a, total };
 }
 
-function renderDebitEntry(main){
+function collectDebitFormData(root){
+  if(!root) return null;
+  const fields = Array.from(root.querySelectorAll('input, textarea, select')).map((el, index) => ({
+    index,
+    tag: el.tagName,
+    type: el.type || '',
+    value: el.value ?? '',
+    checked: !!el.checked,
+  }));
+  const editable = Array.from(root.querySelectorAll('[contenteditable="true"]')).map((el, index) => ({ index, html: el.innerHTML }));
+  return { version: 1, fields, editable };
+}
+
+function applyDebitFormData(root, data){
+  if(!root || !data) return;
+  const fields = Array.from(root.querySelectorAll('input, textarea, select'));
+  (data.fields || []).forEach(item => {
+    const el = fields[item.index];
+    if(!el) return;
+    if(el.type === 'checkbox' || el.type === 'radio') el.checked = !!item.checked;
+    else el.value = item.value ?? '';
+  });
+  const editable = Array.from(root.querySelectorAll('[contenteditable="true"]'));
+  (data.editable || []).forEach(item => {
+    if(editable[item.index]) editable[item.index].innerHTML = item.html || '';
+  });
+}
+
+function collectDebitFormDataFromDocument(){
+  return collectDebitFormData(document.getElementById('debit-form-capture'));
+}
+
+function renderDebitEntry(main, savedFormData=null){
   main.innerHTML = `
     <div class="page-head">
       <h2>${ICONS.debit.replace('<svg','<svg width="18" height="18"')} ${t('debitNewTitle')}</h2>
@@ -1691,6 +1724,7 @@ function renderDebitEntry(main){
     if(match) document.getElementById('a-hdr-partnum').value = document.getElementById('a-hdr-partnum').value || '';
   });
 
+  if(savedFormData) applyDebitFormData(document.getElementById('debit-form-capture'), savedFormData);
   debitCalc();
 
   document.getElementById('a-transfer-btn').onclick = () => debitSaveAndTransfer(main);
@@ -1727,17 +1761,48 @@ async function debitSaveAndTransfer(main){
       grand_total: totals.total,
       pdf_path: null,
       user_name: state.currentUser.name,
+      form_data: collectDebitFormDataFromDocument(),
     };
     // 1) Insert first so we get the real sequential note number
     const saved = await insertDebitNote(rec);
     if(!saved){ showToast(t('debitExportErr'), true); return; }
 
-    // 2) Show the real number on the document before capturing it
-    document.getElementById('a-docno').value = saved.note_number;
+    // 2) Generate/show the real document number everywhere before anything is captured.
+    const finalNoteNumber = String(saved.note_number ?? '').trim();
+    if(!finalNoteNumber){
+      throw new Error('Le numéro du document n’a pas été généré par la base de données.');
+    }
+    const docNoField = document.getElementById('a-docno');
+    if(docNoField){
+      docNoField.value = finalNoteNumber;
+      docNoField.setAttribute('value', finalNoteNumber);
+      docNoField.removeAttribute('data-empty');
+      docNoField.dispatchEvent(new Event('input', {bubbles:true}));
+      docNoField.dispatchEvent(new Event('change', {bubbles:true}));
+    }
     const debitNoField = document.getElementById('a-hdr-debitno');
-    if(debitNoField) debitNoField.value = saved.note_number;
+    if(debitNoField){
+      debitNoField.value = finalNoteNumber;
+      debitNoField.setAttribute('value', finalNoteNumber);
+      debitNoField.dispatchEvent(new Event('input', {bubbles:true}));
+      debitNoField.dispatchEvent(new Event('change', {bubbles:true}));
+    }
 
-    // 3) Capture the now-correct document as a PDF (paginated across as many
+    // Wait for the DOM to repaint so the number is present in the exact document
+    // that will be converted to PDF.
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+
+    // 3) Complete the Historique record with the FINAL form data (including the number)
+    // before creating the PDF. This keeps the history and the exported document identical.
+    const finalFormData = collectDebitFormDataFromDocument();
+    const { error: historyUpdateError } = await sb.from('debit_notes')
+      .update({ form_data: finalFormData })
+      .eq('id', saved.id);
+    if(historyUpdateError) throw historyUpdateError;
+    saved.form_data = finalFormData;
+
+    // 4) Capture the now-complete document as a PDF (paginated across as many
     //    A4 pages as needed — nothing is cropped or squeezed into one page)
     const el = document.getElementById('debit-form-capture');
     const canvas = await html2canvas(el, {
@@ -1752,15 +1817,80 @@ async function debitSaveAndTransfer(main){
           const cloneEl = cloneInputs[i];
           if(!cloneEl) return;
           if(origEl.tagName === 'SELECT'){
-            const opt = cloneEl.querySelector(`option[value="${CSS.escape(origEl.value)}"]`);
-            if(opt) opt.setAttribute('selected', 'selected');
+            Array.from(cloneEl.options).forEach(opt => { opt.removeAttribute('selected'); opt.selected = false; });
+            const selected = Array.from(cloneEl.options).find(opt => opt.value === origEl.value);
+            if(selected){ selected.setAttribute('selected','selected'); selected.selected = true; }
+            cloneEl.value = origEl.value;
           }else if(origEl.type === 'checkbox' || origEl.type === 'radio'){
-            if(origEl.checked) cloneEl.setAttribute('checked', 'checked');
+            cloneEl.checked = origEl.checked;
+            if(origEl.checked) cloneEl.setAttribute('checked','checked'); else cloneEl.removeAttribute('checked');
+          }else if(origEl.tagName === 'TEXTAREA'){
+            cloneEl.value = origEl.value;
+            cloneEl.textContent = origEl.value;
           }else{
             cloneEl.setAttribute('value', origEl.value);
             cloneEl.value = origEl.value;
           }
         });
+        const origEditable = original.querySelectorAll('[contenteditable="true"]');
+        const cloneEditable = clone.querySelectorAll('[contenteditable="true"]');
+        origEditable.forEach((origEl, i) => { if(cloneEditable[i]) cloneEditable[i].innerHTML = origEl.innerHTML; });
+
+        // Disabled inputs can be rendered inconsistently by html2canvas.
+        // Force the document number in the cloned PDF DOM.
+        // IMPORTANT: html2canvas can ignore the visual value of disabled inputs.
+        // Replace the document-number input in the cloned DOM with a real text element,
+        // so the generated PDF contains the exact number that came from Supabase.
+        const liveDocNo = document.getElementById('a-docno');
+        const cloneDocNo = clonedDoc.getElementById('a-docno');
+        if(liveDocNo && cloneDocNo){
+          const numberText = String(liveDocNo.value || finalNoteNumber).trim() || finalNoteNumber;
+          const numberBox = clonedDoc.createElement('div');
+          numberBox.id = 'a-docno-pdf-value';
+          numberBox.className = 'docno';
+          numberBox.textContent = numberText;
+          numberBox.style.cssText = [
+            'height:6.2mm',
+            'box-sizing:border-box',
+            'border:1px solid #777',
+            'text-align:center',
+            'font-weight:bold',
+            'font-size:10px',
+            'line-height:6.2mm',
+            'background:#fafafa',
+            'color:#111',
+            'display:block',
+            'opacity:1',
+            'padding:0',
+            'margin:0',
+            'font-family:Arial,sans-serif'
+          ].join(';');
+          cloneDocNo.replaceWith(numberBox);
+        }
+
+        // Do the same for the Debit note N° field in the header.
+        const liveDebitNo = document.getElementById('a-hdr-debitno');
+        const cloneDebitNo = clonedDoc.getElementById('a-hdr-debitno');
+        if(liveDebitNo && cloneDebitNo){
+          const headerNumber = String(liveDebitNo.value || finalNoteNumber).trim() || finalNoteNumber;
+          const headerBox = clonedDoc.createElement('div');
+          headerBox.id = 'a-hdr-debitno-pdf-value';
+          headerBox.textContent = headerNumber;
+          headerBox.style.cssText = [
+            'box-sizing:border-box',
+            'width:100%',
+            'height:100%',
+            'min-height:6mm',
+            'text-align:center',
+            'font-size:inherit',
+            'font-weight:inherit',
+            'line-height:normal',
+            'padding:2px 4px',
+            'color:#111',
+            'background:#fff'
+          ].join(';');
+          cloneDebitNo.replaceWith(headerBox);
+        }
       },
     });
     const imgData = canvas.toDataURL('image/png');
@@ -1782,13 +1912,13 @@ async function debitSaveAndTransfer(main){
     const blob = pdf.output('blob');
 
     const folder = slugFolder(supplier);
-    const filename = `debit_${saved.note_number}_${Date.now()}.pdf`;
+    const filename = `debit_${finalNoteNumber}_${Date.now()}.pdf`;
     const pdfPath = await uploadDebitPdf(folder, blob, filename);
 
     // 4) Attach the PDF path to the already-saved record
     if(pdfPath) await updateDebitNotePdfPath(saved.id, pdfPath);
 
-    showToast(`${t('debitExportedToast')} (N\u00b0 ${saved.note_number})`);
+    showToast(`${t('debitExportedToast')} (N\u00b0 ${finalNoteNumber})`);
     renderDebitEntry(main);
   }catch(e){
     console.error('debitSaveAndTransfer error:', e);
@@ -1798,6 +1928,65 @@ async function debitSaveAndTransfer(main){
   }
 }
 
+
+async function debitExportExisting(main, note){
+  const btn = document.getElementById('a-transfer-btn');
+  if(btn) btn.disabled = true;
+  try{
+    debitCalc();
+    const formData = collectDebitFormDataFromDocument();
+    const el = document.getElementById('debit-form-capture');
+    if(typeof html2canvas === 'undefined' || !window.jspdf || !el) throw new Error('Export libraries/document unavailable');
+    const canvas = await html2canvas(el, {
+      scale: 2, backgroundColor: '#ffffff', useCORS: true,
+      onclone: (clonedDoc) => {
+        const original = document.getElementById('debit-form-capture');
+        const clone = clonedDoc.getElementById('debit-form-capture');
+        if(!original || !clone) return;
+        const origFields = original.querySelectorAll('input, textarea, select');
+        const cloneFields = clone.querySelectorAll('input, textarea, select');
+        origFields.forEach((origEl, i) => {
+          const cloneEl = cloneFields[i]; if(!cloneEl) return;
+          if(origEl.tagName === 'SELECT'){
+            Array.from(cloneEl.options).forEach(o=>{o.removeAttribute('selected');o.selected=false;});
+            const selected = Array.from(cloneEl.options).find(o=>o.value===origEl.value);
+            if(selected){selected.setAttribute('selected','selected');selected.selected=true;}
+            cloneEl.value = origEl.value;
+          }else if(origEl.type==='checkbox'||origEl.type==='radio'){
+            cloneEl.checked=origEl.checked;
+            if(origEl.checked) cloneEl.setAttribute('checked','checked'); else cloneEl.removeAttribute('checked');
+          }else if(origEl.tagName==='TEXTAREA'){
+            cloneEl.value=origEl.value; cloneEl.textContent=origEl.value;
+          }else{
+            cloneEl.value=origEl.value; cloneEl.setAttribute('value',origEl.value);
+          }
+        });
+      }
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
+    const pageWidth=210, pageHeight=297;
+    const imgWidth=pageWidth, imgHeight=canvas.height*imgWidth/canvas.width;
+    let heightLeft=imgHeight, position=0;
+    pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+    heightLeft-=pageHeight;
+    while(heightLeft>0){ position=heightLeft-imgHeight; pdf.addPage(); pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight); heightLeft-=pageHeight; }
+    const blob=pdf.output('blob');
+    const supplier=(document.getElementById('a-supplier')?.value||note.fournisseur||'supplier').trim();
+    const folder=slugFolder(supplier);
+    const filename=`debit_${note.note_number}_${Date.now()}.pdf`;
+    const pdfPath=await uploadDebitPdf(folder,blob,filename);
+    if(!pdfPath) throw new Error('PDF upload failed');
+    await sb.from('debit_notes').update({form_data:formData,pdf_path:pdfPath}).eq('id',note.id);
+    note.form_data=formData; note.pdf_path=pdfPath;
+    showToast(`PDF exporté (N° ${note.note_number})`);
+    renderDebitList(main);
+  }catch(e){
+    console.error('debitExportExisting error:',e);
+    showToast(`${t('debitExportErr')}: ${(e&&e.message)||e}`,true);
+  }finally{ if(btn) btn.disabled=false; }
+}
 
 function renderDebitList(main){
   main.innerHTML = `
@@ -1832,6 +2021,17 @@ function renderDebitList(main){
   state.debitNotes.forEach(n => {
     const viewBtn = document.getElementById('dview-'+n.id);
     if(viewBtn) viewBtn.onclick = async () => {
+      if(n.form_data){
+        renderDebitEntry(main, n.form_data);
+        const exportBtn = document.getElementById('a-transfer-btn');
+        if(exportBtn){
+          exportBtn.textContent = '📄 Export PDF';
+          exportBtn.onclick = () => debitExportExisting(main, n);
+        }
+        const backBtn = document.getElementById('back');
+        if(backBtn) backBtn.onclick = () => renderDebitList(main);
+        return;
+      }
       if(!n.pdf_path) return;
       const url = await getDebitPdfUrl(n.pdf_path);
       if(url) window.open(url, '_blank');
@@ -1888,7 +2088,6 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
-
 
 
 
