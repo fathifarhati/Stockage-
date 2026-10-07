@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -139,8 +138,8 @@
 /* ============================================================
    CONFIGURATION SUPABASE
    ============================================================ */
-const SUPABASE_URL = 'https://wajjhfgcybipnplmjoeq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhampoZmdjeWJpcG5wbG1qb2VxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1OTkyMzgsImV4cCI6MjEwNDE3NTIzOH0.paDNHxDzWqSdLM5CiOF25roD-l0neafwrqfbh8g27dY';
+const SUPABASE_URL = 'https://ykbfeywmuemuwdiqcjow.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_r4X6obt0sqS9IoPkqD0nFg_mvSgotPp';
 
 /* ================= I18N ================= */
 const I18N = {
@@ -238,6 +237,10 @@ const I18N = {
   viewBtn:{fr:'Ouvrir', ar:'فتح'},
   recipientsTitle:{fr:'Destinataires du rapport', ar:'مستلمو التقرير'},
   recipientsBanner:{fr:'Ces adresses e-mail recevront automatiquement le rapport Contrôle Qualité, 2 fois par jour (13:10 et 21:10).', ar:'هذه العناوين تستلم تلقائياً تقرير مراقبة الجودة، مرتين يومياً (13:10 و 21:10).'},
+  sendTestReportBtn:{fr:'Envoyer un test maintenant', ar:'إرسال تقرير تجريبي الآن'},
+  reportSending:{fr:'Envoi en cours...', ar:'جارٍ إرسال التقرير...'},
+  reportSent:{fr:'Rapport envoyé avec succès', ar:'تم إرسال التقرير بنجاح'},
+  reportSendErr:{fr:'Échec de l’envoi du rapport', ar:'فشل إرسال التقرير'},
   addRecipientBtn:{fr:'Ajouter', ar:'إضافة'},
   newRecipientEmail:{fr:'Adresse e-mail', ar:'البريد الإلكتروني'},
   recipientExistsErr:{fr:'Cet e-mail est déjà dans la liste', ar:'هذا البريد موجود مسبقاً بالقائمة'},
@@ -348,6 +351,7 @@ let state = {
   search: { lot:'', ref:'', designation:'', defaut:'', qtite:'', location:'', fournisseur:'', user:'', date:'' },
   qcSearch: { date:'', fournisseur:'', ref:'', designation:'' },
   lastSearchFocus: null, lastQcSearchFocus: null, lang: 'fr',
+  dashboardStockFrom: '', dashboardStockTo: '', dashboardQcFrom: '', dashboardQcTo: '',
 };
 const DATA_COLS = [
   {key:'lot', field:'lot', label:'fieldLot'}, {key:'ref', field:'ref', label:'fieldRef'},
@@ -374,7 +378,7 @@ function calcPrixTotal(r){
 }
 
 /* ================= SUPABASE CLIENT ================= */
-const configOk = SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY.startsWith('eyJ');
+const configOk = SUPABASE_URL.startsWith('https://') && (SUPABASE_ANON_KEY.startsWith('eyJ') || SUPABASE_ANON_KEY.startsWith('sb_publishable_'));
 const sb = configOk ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 function usernameToEmail(u){ return u.trim().toLowerCase().replace(/\s+/g,'') + '@stock.local'; }
 function uid(){ return 'c' + Date.now() + Math.floor(Math.random()*1000); }
@@ -480,16 +484,12 @@ async function updateDebitNotePdfPath(id, pdfPath){
   return !error;
 }
 async function createUserApi({ username, name, password, role }){
-  const { data: sessionData } = await sb.auth.getSession();
-  const token = sessionData.session ? sessionData.session.access_token : '';
   try{
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/Create_user-ts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ username, name, password, role }),
+    const { data, error } = await sb.rpc('admin_create_user', {
+      p_username: username, p_name: name, p_password: password, p_role: role
     });
-    const json = await res.json();
-    return json;
+    if(error) return { ok:false, error: error.message };
+    return data || { ok:false, error:'Réponse vide' };
   }catch(e){
     return { ok:false, error: String(e) };
   }
@@ -692,10 +692,12 @@ function renderDebitMenu(main){
     <div class="menu-grid">
       <div class="menu-card" id="card-debit-new">${ICONS.entry}<h3>${t('debitNewTitle')}</h3><p>${t('debitNewDesc')}</p></div>
       <div class="menu-card" id="card-debit-list">${ICONS.data}<h3>${t('debitListTitle')}</h3><p>${t('debitListDesc')}</p></div>
+      <div class="menu-card" id="card-debit-manual">${ICONS.pdf}<h3>PDF manuel</h3><p>Ajouter un PDF manuellement</p></div>
     </div>
     <div class="back-link" id="back-top" style="margin-top:22px;">${ICONS.back} ${t('menuTitle')}</div>`;
   document.getElementById('card-debit-new').onclick = async () => { await loadCatalog(); state.view='debit-new'; render(); };
   document.getElementById('card-debit-list').onclick = async () => { await loadDebitNotes(); state.view='debit-list'; render(); };
+  document.getElementById('card-debit-manual').onclick = () => renderDebitManualPdf(main);
   document.getElementById('back-top').onclick = () => { state.view='menu'; render(); };
 }
 
@@ -873,14 +875,34 @@ function renderRow(r){
 }
 
 let chartRefs = [];
+function dashboardDateMatch(date, from, to){
+  const d = String(date || '').slice(0,10);
+  if(from && (!d || d < from)) return false;
+  if(to && (!d || d > to)) return false;
+  return true;
+}
+
 function renderDashboard(main){
   chartRefs.forEach(c=>c.destroy()); chartRefs = [];
-  const recs = state.records;
+  const recs = state.records.filter(r => dashboardDateMatch(r.date, state.dashboardStockFrom, state.dashboardStockTo));
   const totalQte = recs.reduce((s,r)=>s+r.qtite,0);
   const fournisseurs = [...new Set(recs.map(r=>r.fournisseur).filter(Boolean))];
   const locations = [...new Set(recs.map(r=>r.location).filter(Boolean))];
+  const from = state.dashboardStockFrom || '';
+  const to = state.dashboardStockTo || '';
   main.innerHTML = `
     <div class="page-head"><h2>${ICONS.dash.replace('<svg','<svg width="18" height="18"')} ${t('cardDashTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="form-panel" style="margin-bottom:16px;">
+      <div class="user-form" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;">
+        <div><label>${state.lang==='fr'?'Du':'من'}</label><input id="dash-stock-from" type="date" value="${from}"></div>
+        <div><label>${state.lang==='fr'?'Au':'إلى'}</label><input id="dash-stock-to" type="date" value="${to}"></div>
+        <div style="display:flex;gap:8px;align-items:end;">
+          <button class="btn" id="dash-stock-filter" style="max-width:150px;">${state.lang==='fr'?'Filtrer':'تصفية'}</button>
+          <button class="btn secondary" id="dash-stock-reset" style="max-width:150px;">${state.lang==='fr'?'Réinitialiser':'إعادة ضبط'}</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;color:var(--text-muted);font-size:12px;">${state.lang==='fr'?'Période du tableau de bord : ':'فترة لوحة التحكم: '}${from||'—'} → ${to||'—'}</div>
+    </div>
     <div class="stat-grid">
       <div class="stat-card"><div class="label">${t('statRecords')}</div><div class="value">${recs.length}</div></div>
       <div class="stat-card"><div class="label">${t('statQty')}</div><div class="value accent">${totalQte}</div></div>
@@ -896,6 +918,13 @@ function renderDashboard(main){
       <div class="chart-panel wide"><h3>${t('chartRefFournTitle')}</h3><canvas id="chart-ref-fourn"></canvas></div>
     </div>`}`;
   document.getElementById('back').onclick = () => { state.view='stock-menu'; render(); };
+  document.getElementById('dash-stock-filter').onclick = () => {
+    const f = document.getElementById('dash-stock-from').value;
+    const toValue = document.getElementById('dash-stock-to').value;
+    if(f && toValue && f > toValue){ showToast(state.lang==='fr'?'La date « Du » doit être avant « Au ».':'يجب أن يكون تاريخ «من» قبل تاريخ «إلى».', true); return; }
+    state.dashboardStockFrom = f; state.dashboardStockTo = toValue; renderDashboard(main);
+  };
+  document.getElementById('dash-stock-reset').onclick = () => { state.dashboardStockFrom=''; state.dashboardStockTo=''; renderDashboard(main); };
   if(recs.length===0) return;
   const palette = ['#d68c45','#5b8fb0','#5aad8c','#e2574c','#8a93a3','#a687c9','#c9a05b','#6fb0c9','#c97878'];
   const undef = t('undefinedLabel');
@@ -1135,12 +1164,25 @@ function renderQcRow(r){
 let qcChartRefs = [];
 function renderQcDashboard(main){
   qcChartRefs.forEach(c => c.destroy()); qcChartRefs = [];
-  const recs = state.qcRecords;
+  const recs = state.qcRecords.filter(r => dashboardDateMatch(r.date, state.dashboardQcFrom, state.dashboardQcTo));
+  const from = state.dashboardQcFrom || '';
+  const to = state.dashboardQcTo || '';
   const totalControle = recs.reduce((s,r)=>s+r.qteControle,0);
   const totalNonOk = recs.reduce((s,r)=>s+r.qteNonOk,0);
   const globalRate = totalControle > 0 ? (totalNonOk/totalControle*100) : 0;
   main.innerHTML = `
     <div class="page-head"><h2>${ICONS.dash.replace('<svg','<svg width="18" height="18"')} ${t('cardQcDashTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="form-panel" style="margin-bottom:16px;">
+      <div class="user-form" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;">
+        <div><label>${state.lang==='fr'?'Du':'من'}</label><input id="dash-qc-from" type="date" value="${from}"></div>
+        <div><label>${state.lang==='fr'?'Au':'إلى'}</label><input id="dash-qc-to" type="date" value="${to}"></div>
+        <div style="display:flex;gap:8px;align-items:end;">
+          <button class="btn" id="dash-qc-filter" style="max-width:150px;">${state.lang==='fr'?'Filtrer':'تصفية'}</button>
+          <button class="btn secondary" id="dash-qc-reset" style="max-width:150px;">${state.lang==='fr'?'Réinitialiser':'إعادة ضبط'}</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;color:var(--text-muted);font-size:12px;">${state.lang==='fr'?'Période du tableau de bord : ':'فترة لوحة التحكم: '}${from||'—'} → ${to||'—'}</div>
+    </div>
     <div class="stat-grid">
       <div class="stat-card"><div class="label">${t('qcStatControls')}</div><div class="value">${recs.length}</div></div>
       <div class="stat-card"><div class="label">${t('qcStatControlled')}</div><div class="value blue">${totalControle}</div></div>
@@ -1154,6 +1196,14 @@ function renderQcDashboard(main){
       <div class="chart-panel wide"><h3>${t('qcChartRefTitle')}</h3><canvas id="qc-chart-ref"></canvas></div>
     </div>`}`;
   document.getElementById('back').onclick = () => { state.view='qc-menu'; render(); };
+  document.getElementById('dash-qc-filter').onclick = () => {
+    const f = document.getElementById('dash-qc-from').value;
+    const toValue = document.getElementById('dash-qc-to').value;
+    if(f && toValue && f > toValue){ showToast(state.lang==='fr'?'La date « Du » doit être avant « Au ».':'يجب أن يكون تاريخ «من» قبل تاريخ «إلى».', true); return; }
+    state.dashboardQcFrom = f; state.dashboardQcTo = toValue; renderQcDashboard(main);
+  };
+  document.getElementById('dash-qc-reset').onclick = () => { state.dashboardQcFrom=''; state.dashboardQcTo=''; renderQcDashboard(main); };
+
   if(recs.length===0) return;
   const palette = ['#d68c45','#5b8fb0','#5aad8c','#e2574c','#8a93a3','#a687c9','#c9a05b','#6fb0c9'];
   const defectTotals = {};
@@ -1252,6 +1302,41 @@ async function renderUsers(main){
   };
 }
 
+/* ================= RAPPORT QUALITE PAR E-MAIL ================= */
+async function sendQualityReportTest() {
+  const btn = document.getElementById('send-test-report-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi...'; }
+
+  try {
+    const { data, error } = await sb.rpc('send_quality_report', { p_test: true });
+    if (error) throw new Error(error.message);
+    if (!data || data.ok !== true) throw new Error((data && data.error) || 'Échec de l’envoi');
+
+    let status = null;
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      const { data: st, error: stErr } = await sb.rpc('report_request_status', { p_id: data.request_id });
+      if (stErr) break;
+      if (st && st.done) { status = st; break; }
+    }
+
+    if (status) {
+      if (status.status_code >= 200 && status.status_code < 300) {
+        showToast(`Rapport envoyé à ${data.recipients} destinataire(s)`);
+      } else {
+        throw new Error(`[${status.status_code}] ` + (status.message || 'Échec Resend'));
+      }
+    } else {
+      showToast(`Envoi lancé (${data.recipients} destinataire(s)) — vérifiez votre boîte mail`);
+    }
+  } catch (e) {
+    console.error('sendQualityReportTest:', e);
+    showToast('Erreur envoi : ' + (e && e.message ? e.message : 'Erreur inconnue'), true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('sendTestReportBtn'); }
+  }
+}
+
 /* ================= RECIPIENTS (rapport auto par e-mail) ================= */
 function renderRecipients(main){
   main.innerHTML = `
@@ -1261,7 +1346,7 @@ function renderRecipients(main){
       <div class="user-form" style="grid-template-columns:1fr auto;">
         <div><label>${t('newRecipientEmail')}</label><input id="r-email" type="email" placeholder="nom@exemple.com"></div>
       </div>
-      <button class="btn" id="add-recipient-btn" style="max-width:180px;">${t('addRecipientBtn')}</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;"><button class="btn" id="add-recipient-btn" style="max-width:180px;">${t('addRecipientBtn')}</button><button class="btn" id="send-test-report-btn" type="button" style="max-width:230px;">${t('sendTestReportBtn')}</button></div>
     </div>
     <div class="table-wrap">
       ${state.recipients.length===0 ? `<div class="empty-state">${t('noRecipients')}.</div>` : `
@@ -1283,6 +1368,7 @@ function renderRecipients(main){
     const ok = await insertRecipient(email);
     if(ok){ await loadRecipients(); showToast(t('recipientAddedToast')); renderRecipients(main); }
   };
+  document.getElementById('send-test-report-btn').onclick = sendQualityReportTest;
   state.recipients.forEach(r => {
     const btn = document.getElementById('rdel-'+r.id);
     if(!btn) return;
@@ -1763,48 +1849,28 @@ async function debitSaveAndTransfer(main){
       user_name: state.currentUser.name,
       form_data: collectDebitFormDataFromDocument(),
     };
-    // 1) Insert first so we get the real sequential note number
+
+    // 1) Insert first: Supabase generates the real sequential document number.
     const saved = await insertDebitNote(rec);
     if(!saved){ showToast(t('debitExportErr'), true); return; }
 
-    // 2) Generate/show the real document number everywhere before anything is captured.
-    const finalNoteNumber = String(saved.note_number ?? '').trim();
-    if(!finalNoteNumber){
-      throw new Error('Le numéro du document n’a pas été généré par la base de données.');
-    }
-    const docNoField = document.getElementById('a-docno');
-    if(docNoField){
-      docNoField.value = finalNoteNumber;
-      docNoField.setAttribute('value', finalNoteNumber);
-      docNoField.removeAttribute('data-empty');
-      docNoField.dispatchEvent(new Event('input', {bubbles:true}));
-      docNoField.dispatchEvent(new Event('change', {bubbles:true}));
-    }
+    // 2) Put the generated number into BOTH visible document fields before PDF capture.
+    const docNo = String(saved.note_number ?? '');
+    const docField = document.getElementById('a-docno');
     const debitNoField = document.getElementById('a-hdr-debitno');
-    if(debitNoField){
-      debitNoField.value = finalNoteNumber;
-      debitNoField.setAttribute('value', finalNoteNumber);
-      debitNoField.dispatchEvent(new Event('input', {bubbles:true}));
-      debitNoField.dispatchEvent(new Event('change', {bubbles:true}));
-    }
+    if(docField) docField.value = docNo;
+    if(debitNoField) debitNoField.value = docNo;
 
-    // Wait for the DOM to repaint so the number is present in the exact document
-    // that will be converted to PDF.
-    await new Promise(requestAnimationFrame);
-    await new Promise(requestAnimationFrame);
+    // Recalculate and collect again AFTER the number is inserted, so Supabase
+    // stores exactly the version that is going to the PDF.
+    debitCalc();
+    const formData = collectDebitFormDataFromDocument();
+    await sb.from('debit_notes').update({ form_data: formData }).eq('id', saved.id);
 
-    // 3) Complete the Historique record with the FINAL form data (including the number)
-    // before creating the PDF. This keeps the history and the exported document identical.
-    const finalFormData = collectDebitFormDataFromDocument();
-    const { error: historyUpdateError } = await sb.from('debit_notes')
-      .update({ form_data: finalFormData })
-      .eq('id', saved.id);
-    if(historyUpdateError) throw historyUpdateError;
-    saved.form_data = finalFormData;
-
-    // 4) Capture the now-complete document as a PDF (paginated across as many
-    //    A4 pages as needed — nothing is cropped or squeezed into one page)
+    // 3) Capture the existing Autoliv paper. No CSS/layout is changed here.
     const el = document.getElementById('debit-form-capture');
+    // Allow the DOM to repaint the generated document number and all field values.
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const canvas = await html2canvas(el, {
       scale: 2, backgroundColor: '#ffffff', useCORS: true,
       onclone: (clonedDoc) => {
@@ -1827,72 +1893,26 @@ async function debitSaveAndTransfer(main){
           }else if(origEl.tagName === 'TEXTAREA'){
             cloneEl.value = origEl.value;
             cloneEl.textContent = origEl.value;
+            cloneEl.innerHTML = '';
+            cloneEl.appendChild(clonedDoc.createTextNode(origEl.value || ''));
           }else{
-            cloneEl.setAttribute('value', origEl.value);
-            cloneEl.value = origEl.value;
+            // html2canvas can lose live values when the source control is disabled.
+            // Make the cloned control paintable while keeping the real paper unchanged.
+            cloneEl.removeAttribute('disabled');
+            cloneEl.readOnly = true;
+            cloneEl.setAttribute('value', origEl.value || '');
+            cloneEl.value = origEl.value || '';
+            cloneEl.style.color = '#111';
+            cloneEl.style.opacity = '1';
+            cloneEl.style.webkitTextFillColor = '#111';
           }
         });
         const origEditable = original.querySelectorAll('[contenteditable="true"]');
         const cloneEditable = clone.querySelectorAll('[contenteditable="true"]');
         origEditable.forEach((origEl, i) => { if(cloneEditable[i]) cloneEditable[i].innerHTML = origEl.innerHTML; });
-
-        // Disabled inputs can be rendered inconsistently by html2canvas.
-        // Force the document number in the cloned PDF DOM.
-        // IMPORTANT: html2canvas can ignore the visual value of disabled inputs.
-        // Replace the document-number input in the cloned DOM with a real text element,
-        // so the generated PDF contains the exact number that came from Supabase.
-        const liveDocNo = document.getElementById('a-docno');
-        const cloneDocNo = clonedDoc.getElementById('a-docno');
-        if(liveDocNo && cloneDocNo){
-          const numberText = String(liveDocNo.value || finalNoteNumber).trim() || finalNoteNumber;
-          const numberBox = clonedDoc.createElement('div');
-          numberBox.id = 'a-docno-pdf-value';
-          numberBox.className = 'docno';
-          numberBox.textContent = numberText;
-          numberBox.style.cssText = [
-            'height:6.2mm',
-            'box-sizing:border-box',
-            'border:1px solid #777',
-            'text-align:center',
-            'font-weight:bold',
-            'font-size:10px',
-            'line-height:6.2mm',
-            'background:#fafafa',
-            'color:#111',
-            'display:block',
-            'opacity:1',
-            'padding:0',
-            'margin:0',
-            'font-family:Arial,sans-serif'
-          ].join(';');
-          cloneDocNo.replaceWith(numberBox);
-        }
-
-        // Do the same for the Debit note N° field in the header.
-        const liveDebitNo = document.getElementById('a-hdr-debitno');
-        const cloneDebitNo = clonedDoc.getElementById('a-hdr-debitno');
-        if(liveDebitNo && cloneDebitNo){
-          const headerNumber = String(liveDebitNo.value || finalNoteNumber).trim() || finalNoteNumber;
-          const headerBox = clonedDoc.createElement('div');
-          headerBox.id = 'a-hdr-debitno-pdf-value';
-          headerBox.textContent = headerNumber;
-          headerBox.style.cssText = [
-            'box-sizing:border-box',
-            'width:100%',
-            'height:100%',
-            'min-height:6mm',
-            'text-align:center',
-            'font-size:inherit',
-            'font-weight:inherit',
-            'line-height:normal',
-            'padding:2px 4px',
-            'color:#111',
-            'background:#fff'
-          ].join(';');
-          cloneDebitNo.replaceWith(headerBox);
-        }
       },
     });
+
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -1910,30 +1930,45 @@ async function debitSaveAndTransfer(main){
       heightLeft -= pageHeight;
     }
     const blob = pdf.output('blob');
+    const filename = `debit_${docNo || saved.id}_${Date.now()}.pdf`;
 
+    // 4) Download directly to the device. This does NOT open a new PDF tab/window.
+    const downloadUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { a.remove(); URL.revokeObjectURL(downloadUrl); }, 1000);
+
+    // 5) Also save the exact same PDF in Supabase Storage and attach its path.
     const folder = slugFolder(supplier);
-    const filename = `debit_${finalNoteNumber}_${Date.now()}.pdf`;
     const pdfPath = await uploadDebitPdf(folder, blob, filename);
+    if(!pdfPath) throw new Error('PDF upload failed');
+    await updateDebitNotePdfPath(saved.id, pdfPath);
 
-    // 4) Attach the PDF path to the already-saved record
-    if(pdfPath) await updateDebitNotePdfPath(saved.id, pdfPath);
-
-    showToast(`${t('debitExportedToast')} (N\u00b0 ${finalNoteNumber})`);
+    await loadDebitNotes();
+    showToast(`PDF enregistré et téléchargé — N° ${docNo}`);
     renderDebitEntry(main);
   }catch(e){
     console.error('debitSaveAndTransfer error:', e);
     showToast(`${t('debitExportErr')}: ${(e && e.message) || e}`, true);
   }finally{
-    btn.disabled = false;
+    if(btn) btn.disabled = false;
   }
 }
-
 
 async function debitExportExisting(main, note){
   const btn = document.getElementById('a-transfer-btn');
   if(btn) btn.disabled = true;
   try{
     debitCalc();
+    const noteNo = String(note.note_number ?? '');
+    const docField = document.getElementById('a-docno');
+    const debitNoField = document.getElementById('a-hdr-debitno');
+    if(docField) docField.value = noteNo;
+    if(debitNoField) debitNoField.value = noteNo;
     const formData = collectDebitFormDataFromDocument();
     const el = document.getElementById('debit-form-capture');
     if(typeof html2canvas === 'undefined' || !window.jspdf || !el) throw new Error('Export libraries/document unavailable');
@@ -1951,7 +1986,7 @@ async function debitExportExisting(main, note){
             Array.from(cloneEl.options).forEach(o=>{o.removeAttribute('selected');o.selected=false;});
             const selected = Array.from(cloneEl.options).find(o=>o.value===origEl.value);
             if(selected){selected.setAttribute('selected','selected');selected.selected=true;}
-            cloneEl.value = origEl.value;
+            cloneEl.value=origEl.value;
           }else if(origEl.type==='checkbox'||origEl.type==='radio'){
             cloneEl.checked=origEl.checked;
             if(origEl.checked) cloneEl.setAttribute('checked','checked'); else cloneEl.removeAttribute('checked');
@@ -1966,26 +2001,78 @@ async function debitExportExisting(main, note){
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p','mm','a4');
-    const pageWidth=210, pageHeight=297;
+    const pageWidth=pdf.internal.pageSize.getWidth(), pageHeight=pdf.internal.pageSize.getHeight();
     const imgWidth=pageWidth, imgHeight=canvas.height*imgWidth/canvas.width;
     let heightLeft=imgHeight, position=0;
     pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
     heightLeft-=pageHeight;
     while(heightLeft>0){ position=heightLeft-imgHeight; pdf.addPage(); pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight); heightLeft-=pageHeight; }
     const blob=pdf.output('blob');
+    const filename=`debit_${noteNo || note.id}_${Date.now()}.pdf`;
+
+    // Direct device download; no new browser window/tab.
+    const downloadUrl=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=downloadUrl; a.download=filename; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{a.remove();URL.revokeObjectURL(downloadUrl);},1000);
+
     const supplier=(document.getElementById('a-supplier')?.value||note.fournisseur||'supplier').trim();
     const folder=slugFolder(supplier);
-    const filename=`debit_${note.note_number}_${Date.now()}.pdf`;
     const pdfPath=await uploadDebitPdf(folder,blob,filename);
     if(!pdfPath) throw new Error('PDF upload failed');
     await sb.from('debit_notes').update({form_data:formData,pdf_path:pdfPath}).eq('id',note.id);
     note.form_data=formData; note.pdf_path=pdfPath;
-    showToast(`PDF exporté (N° ${note.note_number})`);
+    await loadDebitNotes();
+    showToast(`PDF enregistré et téléchargé — N° ${noteNo}`);
     renderDebitList(main);
   }catch(e){
     console.error('debitExportExisting error:',e);
     showToast(`${t('debitExportErr')}: ${(e&&e.message)||e}`,true);
   }finally{ if(btn) btn.disabled=false; }
+}
+
+function renderDebitManualPdf(main){
+  main.innerHTML = `
+    <div class="page-head">
+      <h2>${ICONS.pdf} PDF manuel</h2>
+      <div class="back-link" id="back">${ICONS.back} ${t('back')}</div>
+    </div>
+    <div class="table-wrap" style="padding:22px;">
+      <div style="max-width:620px;margin:0 auto;">
+        <h3 style="margin-top:0;">Ajouter un PDF manuellement</h3>
+        <p style="color:var(--text-muted);font-size:13px;">Sélectionnez un fichier PDF depuis l'appareil. Le fichier sera envoyé dans Supabase Storage sans modifier la feuille Autoliv.</p>
+        <input id="manual-pdf-file" type="file" accept="application/pdf" style="margin:16px 0;">
+        <div id="manual-pdf-name" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;"></div>
+        <button class="btn" id="manual-pdf-upload" disabled>⬆ Ajouter le PDF</button>
+        <button class="btn" id="manual-pdf-cancel" style="margin-inline-start:8px;">${t('back')}</button>
+        <div id="manual-pdf-status" style="margin-top:16px;font-size:13px;"></div>
+      </div>
+    </div>`;
+  document.getElementById('back').onclick = () => { state.view='debit-menu'; render(); };
+  document.getElementById('manual-pdf-cancel').onclick = () => { state.view='debit-menu'; render(); };
+  const fileInput=document.getElementById('manual-pdf-file');
+  const uploadBtn=document.getElementById('manual-pdf-upload');
+  const nameBox=document.getElementById('manual-pdf-name');
+  const status=document.getElementById('manual-pdf-status');
+  fileInput.onchange=()=>{
+    const f=fileInput.files && fileInput.files[0];
+    uploadBtn.disabled=!(f && (f.type==='application/pdf' || f.name.toLowerCase().endsWith('.pdf')));
+    nameBox.textContent=f ? `Fichier: ${f.name}` : '';
+  };
+  uploadBtn.onclick=async()=>{
+    const f=fileInput.files && fileInput.files[0]; if(!f) return;
+    uploadBtn.disabled=true; status.textContent='Téléchargement en cours...';
+    try{
+      const safe=slugFolder((f.name||'manual').replace(/\.pdf$/i,'')) || 'manual';
+      const path=await uploadDebitPdf(`manual/${safe}`,f,f.name);
+      if(!path) throw new Error('PDF upload failed');
+      status.textContent='PDF ajouté avec succès.';
+      showToast('PDF manuel ajouté');
+    }catch(e){
+      status.textContent=`Échec: ${(e&&e.message)||e}`;
+      uploadBtn.disabled=false;
+    }
+  };
 }
 
 function renderDebitList(main){
@@ -2010,7 +2097,7 @@ function renderDebitList(main){
               <td class="num">${debitMoney(n.grand_total)}</td>
               <td>${escHtml(n.report_raised_by)}</td>
               <td class="row-actions">
-                <button class="icon-btn" id="dview-${n.id}" title="${t('viewBtn')}">${ICONS.download}</button>
+                <button class="icon-btn" id="dview-${n.id}" title="${n.pdf_path ? 'PDF enregistré — ouvrir' : 'PDF non enregistré — extraire'}" style="min-width:72px;">${n.pdf_path ? 'تم' : 'لم يتم'}</button>
                 ${state.currentUser.role==='admin' ? `<button class="icon-btn del" id="ddel-${n.id}" title="${t('deletedToast')}">${ICONS.del}</button>` : ''}
               </td>
             </tr>`).join('')}
@@ -2032,9 +2119,13 @@ function renderDebitList(main){
         if(backBtn) backBtn.onclick = () => renderDebitList(main);
         return;
       }
-      if(!n.pdf_path) return;
+      if(!n.pdf_path){ showToast('لم يتم إنشاء PDF بعد', true); return; }
       const url = await getDebitPdfUrl(n.pdf_path);
-      if(url) window.open(url, '_blank');
+      if(url){
+        const a=document.createElement('a');
+        a.href=url; a.target='_self'; a.rel='noopener';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
     };
     const delBtn = document.getElementById('ddel-'+n.id);
     if(delBtn) delBtn.onclick = async () => {
