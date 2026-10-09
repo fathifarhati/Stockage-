@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -329,6 +330,8 @@ const I18N = {
   roleUser:{fr:'Opérateur', ar:'مشغل'},
   roleEmployee:{fr:'Employé(e)', ar:'موظف'},
   roleVisitor:{fr:'Visiteur', ar:'زائر'},
+  cardOpTitle:{fr:'Portail opérateur', ar:'بوابة المشغّل'},
+  cardOpDesc:{fr:'8 tables de contrôle : saisie horaire, rejets et commentaires', ar:'8 طاولات مراقبة: إدخال كل ساعة والمرفوضات والتعليقات'},
   roleUpdatedToast:{fr:'Rôle mis à jour', ar:'تم تحديث الصلاحية'},
   connError:{fr:"Erreur de connexion au serveur. Vérifiez votre connexion internet.", ar:'خطأ في الاتصال بالخادم. تحقق من اتصالك بالإنترنت.'},
   configErrorTitle:{fr:'Configuration requise', ar:'الإعداد مطلوب'},
@@ -654,6 +657,9 @@ function render(){
   if(state.view === 'ccs-new') renderCcsNew(main);
   if(state.view === 'ccs-list') renderCcsList(main);
   if(state.view === 'ccs-pdf') renderCcsPdf(main);
+  if(state.view === 'op-portal') renderOpPortal(main);
+  if(state.view === 'op-table') renderOpTable(main);
+  if(state.view === 'op-history') renderOpHistory(main);
   if(state.view === 'catalog') renderCatalog(main);
   if(state.view === 'qc-entry') renderQcEntry(main);
   if(state.view === 'qc-data') renderQcData(main);
@@ -727,6 +733,7 @@ function renderMenu(main){
       <div class="menu-card" id="card-bq">${ICONS.pdf}<h3>${t('cardBqTitle')}</h3><p>${t('cardBqDesc')}</p></div>
       <div class="menu-card" id="card-debit">${ICONS.debit}<h3>${t('cardDebitTitle')}</h3><p>${t('cardDebitDesc')}</p></div>
       <div class="menu-card" id="card-ccs">${ICONS.entry}<h3>${tc('cardTitle')}</h3><p>${tc('cardDesc')}</p></div>
+      <div class="menu-card" id="card-op">${ICONS.qc}<h3>${t('cardOpTitle')}</h3><p>${t('cardOpDesc')}</p></div>
       ${isAdmin ? `<div class="menu-card" id="card-users">${ICONS.users}<h3>${t('cardUsersTitle')}</h3><p>${t('cardUsersDesc')}</p></div>` : ''}
       ${isAdmin ? `<div class="menu-card" id="card-recipients">${ICONS.mail}<h3>${t('cardRecipientsTitle')}</h3><p>${t('cardRecipientsDesc')}</p></div>` : ''}
     </div>`;
@@ -736,6 +743,7 @@ function renderMenu(main){
   document.getElementById('card-bq').onclick = async () => { state.currentLibrary='bonnequalite'; state.pdfFolder=''; await listPdfEntries(''); state.view='pdf-library'; render(); };
   document.getElementById('card-debit').onclick = () => { state.view='debit-menu'; render(); };
   document.getElementById('card-ccs').onclick = () => { state.view='ccs-menu'; render(); };
+  document.getElementById('card-op').onclick = () => { state.view='op-portal'; render(); };
   if(isAdmin) document.getElementById('card-users').onclick = () => { state.view='users'; render(); };
   if(isAdmin) document.getElementById('card-recipients').onclick = async () => { await loadRecipients(); state.view='recipients'; render(); };
 }
@@ -1538,6 +1546,19 @@ const AUTOLIV_DOC_CSS = `
 .autoliv-doc .ncmInput{border:1px solid #777}
 `;
 
+/* The sheet is designed in tiny units (6-7px fonts). Browsers with a larger "minimum font size" (many PCs)
+   inflate those fonts and the sheet overlaps itself. So the sheet is laid out 3x bigger (fonts >= 17px, which no
+   browser setting inflates) and shrunk back with CSS zoom: same look, immune to the minimum font size. */
+const DEBIT_SCALE = 3;
+function debitScaleLen(str){
+  return str.replace(/(-?\d*\.?\d+)(mm|px)/g, (m, n, u) => (Math.round(parseFloat(n) * DEBIT_SCALE * 1000) / 1000) + u);
+}
+function debitCssScaled(){
+  return debitScaleLen(AUTOLIV_DOC_CSS)
+    .replace('padding:' + (10 * DEBIT_SCALE) + 'px 0;', 'padding:10px 0;')
+    + `\n.autoliv-doc .page{zoom:${(1 / DEBIT_SCALE).toFixed(6)};}`;
+}
+
 function debitMoney(n){ return (Number(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u20ac'; }
 function debitV(e){ return parseFloat(e && e.value) || 0; }
 
@@ -1737,7 +1758,7 @@ function renderDebitEntry(main, savedFormData=null){
       <h2>${ICONS.debit.replace('<svg','<svg width="18" height="18"')} ${t('debitNewTitle')}</h2>
       <div class="back-link" id="back">${ICONS.back} ${t('back')}</div>
     </div>
-    <style>${AUTOLIV_DOC_CSS}</style>
+    <style>${debitCssScaled()}</style>
     <datalist id="debit-fourn-list">${state.catalog.map(c=>`<option value="${escAttr(c.fournisseur)}">`).join('')}</datalist>
     <datalist id="debit-ref-list">${state.catalog.map(c=>`<option value="${escAttr(c.ref)}">`).join('')}</datalist>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;">
@@ -1745,7 +1766,7 @@ function renderDebitEntry(main, savedFormData=null){
       <button class="btn" id="a-pdf-btn" style="width:auto;">&#128196; ${t('debitPdfBtn')}</button>
     </div>
     <div class="autoliv-doc-scroll">
-      <div class="autoliv-doc">${autolivDocMarkup()}</div>
+      <div class="autoliv-doc">${debitScaleLen(autolivDocMarkup())}</div>
     </div>
   `;
   document.getElementById('back').onclick = () => { state.view='debit-menu'; render(); };
@@ -1883,11 +1904,13 @@ async function debitSaveToHistory(main){
 function debitPrintifyControls(original, clone, clonedDoc){
   const src = Array.from(original.querySelectorAll('input, textarea, select'));
   const dst = Array.from(clone.querySelectorAll('input, textarea, select'));
-  src.forEach((s, i) => {
+  clone.style.zoom = '1';                      // capture at full size (no CSS zoom in the picture)
+  const win = clonedDoc.defaultView || window;
+  const jobs = [];
+  src.forEach((s, i) => {                      // 1) read everything first
     const d = dst[i];
-    if(!d || !d.parentNode) return;
-    if(s.type === 'hidden'){ return; }
-    const cs = window.getComputedStyle(s);
+    if(!d || !d.parentNode || s.type === 'hidden') return;
+    const cs = win.getComputedStyle(d);
     let text = '';
     if(s.tagName === 'SELECT'){
       const opt = s.options[s.selectedIndex];
@@ -1897,31 +1920,38 @@ function debitPrintifyControls(original, clone, clonedDoc){
     }else{
       text = s.value || '';
     }
-    const h = s.offsetHeight || Math.round(s.getBoundingClientRect().height) || 0;
-    const ta = cs.textAlign;
-    const justify = ta === 'center' ? 'center' : (ta === 'right' || ta === 'end') ? 'flex-end' : 'flex-start';
-    const color = (!cs.color || cs.color === 'transparent' || cs.color === 'rgba(0, 0, 0, 0)') ? '#111' : cs.color;
-    const border = (cs.borderTopStyle && cs.borderTopStyle !== 'none' && parseFloat(cs.borderTopWidth) > 0)
-      ? `${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}` : '0';
+    jobs.push({
+      d, text, tag: s.tagName, h: d.offsetHeight,
+      align: cs.textAlign, color: cs.color, bg: cs.backgroundColor,
+      bStyle: cs.borderTopStyle, bWidth: cs.borderTopWidth, bColor: cs.borderTopColor,
+      pad: `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`,
+      ff: cs.fontFamily, fs: cs.fontSize, fw: cs.fontWeight, fst: cs.fontStyle, ls: cs.letterSpacing
+    });
+  });
+  jobs.forEach(j => {                          // 2) then replace each control by a plain text box
+    const justify = j.align === 'center' ? 'center' : (j.align === 'right' || j.align === 'end') ? 'flex-end' : 'flex-start';
+    const color = (!j.color || j.color === 'transparent' || j.color === 'rgba(0, 0, 0, 0)') ? '#111' : j.color;
+    const border = (j.bStyle && j.bStyle !== 'none' && parseFloat(j.bWidth) > 0) ? `${j.bWidth} ${j.bStyle} ${j.bColor}` : '0';
     const box = clonedDoc.createElement('div');
-    box.textContent = text;
+    box.textContent = j.text;
     box.style.cssText = [
-      'display:flex', 'align-items:' + (s.tagName === 'TEXTAREA' ? 'flex-start' : 'center'),
+      'display:flex', 'align-items:' + (j.tag === 'TEXTAREA' ? 'flex-start' : 'center'),
       'justify-content:' + justify, 'box-sizing:border-box', 'width:100%',
-      h ? 'height:' + h + 'px' : 'min-height:6px',
-      'overflow:hidden', 'white-space:' + (s.tagName === 'TEXTAREA' ? 'pre-wrap' : 'nowrap'),
-      'margin:0', `padding:${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`,
-      `font-family:${cs.fontFamily}`, `font-size:${cs.fontSize}`, `font-weight:${cs.fontWeight}`,
-      `font-style:${cs.fontStyle}`, `letter-spacing:${cs.letterSpacing}`,
-      `color:${color}`, `background:${cs.backgroundColor}`, `border:${border}`
+      j.h ? 'height:' + j.h + 'px' : 'min-height:6px',
+      'overflow:hidden', 'white-space:' + (j.tag === 'TEXTAREA' ? 'pre-wrap' : 'nowrap'),
+      'margin:0', 'padding:' + j.pad,
+      `font-family:${j.ff}`, `font-size:${j.fs}`, `font-weight:${j.fw}`,
+      `font-style:${j.fst}`, `letter-spacing:${j.ls}`,
+      `color:${color}`, `background:${j.bg}`, `border:${border}`
     ].join(';');
-    d.replaceWith(box);
+    j.d.replaceWith(box);
   });
 }
 
 async function debitMakePdfBlob(el){
   const canvas = await html2canvas(el, {
-    scale: 2, backgroundColor: '#ffffff', useCORS: true,
+    scale: 2 / DEBIT_SCALE, backgroundColor: '#ffffff', useCORS: true,
+    windowWidth: 2800,
     onclone: (clonedDoc) => {
       const original = document.getElementById('debit-form-capture');
       const clone = clonedDoc.getElementById('debit-form-capture');
@@ -2644,6 +2674,452 @@ async function sendQualityReportTest(){
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = t('sendTestReportBtn'); }
   }
+}
+
+/* ================= PORTAIL OPÉRATEUR (8 tables de contrôle) ================= */
+const OP_TYPES = ['Grani', 'Rayure', 'Trace', 'Piqûre', 'Coup', 'Cosse', 'Autre'];
+const OP_H1 = { morning: 5, afternoon: 13, night: 21 };
+const OP_I18N = {
+  portal:  { fr: 'Portail opérateur', ar: 'بوابة المشغّل' },
+  team:    { fr: 'Équipe actuelle', ar: 'الفريق الحالي' },
+  saved:   { fr: 'Enregistré', ar: 'تم الحفظ' },
+  err:     { fr: 'Erreur', ar: 'خطأ' },
+  noTable: { fr: 'Table op_tables introuvable : exécutez le script SQL 13_op_tables.sql dans Supabase', ar: 'جدول op_tables غير موجود: شغّل ملف SQL رقم 13_op_tables.sql في Supabase' },
+  add:     { fr: '+ Ajouter un type de rejet', ar: '+ إضافة نوع مرفوض' },
+  hint:    { fr: 'Touchez une ligne pour saisir le réel, les rejets et les commentaires.', ar: 'المس أي سطر لإدخال الكمية الفعلية والمرفوضات والتعليقات.' },
+  history: { fr: 'Historique', ar: 'السجل' },
+  histSub: { fr: 'Données enregistrées par jour, équipe et heure', ar: 'البيانات المحفوظة حسب اليوم والفريق والساعة' },
+  today:   { fr: "Aujourd'hui", ar: 'اليوم' },
+  noData:  { fr: 'Aucune donnée pour cette table à cette période', ar: 'لا توجد بيانات لهذه الطاولة في هذه الفترة' },
+  readonly:{ fr: 'Lecture seule', ar: 'للقراءة فقط' },
+  close:   { fr: 'Fermer', ar: 'إغلاق' },
+  loading: { fr: 'Chargement…', ar: 'جارٍ التحميل…' },
+  last:    { fr: 'Dernière saisie', ar: 'آخر إدخال' },
+  teamTot: { fr: 'Total équipe', ar: 'مجموع الفريق' },
+  sMorning:{ fr: 'Matin', ar: 'الصباح' },
+  sAfter:  { fr: 'Après-midi', ar: 'المساء' },
+  sNight:  { fr: 'Nuit', ar: 'الليل' }
+};
+function opT(k){ const o = OP_I18N[k]; return o ? (o[state.lang] || o.fr) : k; }
+function opPad(n){ return String(n).padStart(2, '0'); }
+function opErrMsg(e){ const m = (e && e.message) || String(e); return /op_tables/i.test(m) ? opT('noTable') : m; }
+
+function opNowTunis(){
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Tunis', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(new Date());
+  const g = (t) => parts.find(p => p.type === t).value;
+  return { y: +g('year'), m: +g('month'), d: +g('day'), hour: (+g('hour')) % 24 };
+}
+/* Équipe selon l'heure d'ouverture : 5->13 matin, 13->21 après-midi, 21->5 nuit (date = jour où l'équipe a commencé) */
+function opCurrentShift(){
+  const n = opNowTunis();
+  let key, h1, date = `${n.y}-${opPad(n.m)}-${opPad(n.d)}`;
+  if(n.hour >= 21){ key = 'night'; h1 = 21; }
+  else if(n.hour >= 13){ key = 'afternoon'; h1 = 13; }
+  else if(n.hour >= 5){ key = 'morning'; h1 = 5; }
+  else{ key = 'night'; h1 = 21; date = new Date(Date.UTC(n.y, n.m - 1, n.d - 1)).toISOString().slice(0, 10); }
+  return { key, h1, date };
+}
+function opShiftLabel(h1){ return `${h1 % 24} \u2192 ${(h1 + 8) % 24}`; }
+function opRowLabel(h){ return `${h % 24}:00 \u2192 ${(h + 1) % 24}:00`; }
+function opBlankRows(h1){
+  return Array.from({ length: 8 }, (_, i) => ({ time: opRowLabel(h1 + i), demand: 0, real: null, reject: 0, rejects: [], comment: '' }));
+}
+function opNormalize(rec){
+  const h1 = OP_H1[rec.shift] || 5;
+  const base = opBlankRows(h1);
+  const src = Array.isArray(rec.hours_data) ? rec.hours_data : [];
+  rec.hours_data = base.map((b, i) => Object.assign(b, src[i] || {}));
+  rec.ref = rec.ref || '';
+  rec.qty_total = Number(rec.qty_total) || 0;
+  return rec;
+}
+/* Quantité répartie équitablement sur les 8 cases rouges (le reste va aux premières lignes) */
+function opDistribute(total){
+  const q = Math.max(0, Math.floor(Number(total) || 0));
+  const base = Math.floor(q / 8), rem = q % 8;
+  return Array.from({ length: 8 }, (_, i) => base + (i < rem ? 1 : 0));
+}
+function opTotals(rec){
+  let demand = 0, real = 0, rej = 0;
+  rec.hours_data.forEach(r => { demand += Number(r.demand) || 0; real += Number(r.real) || 0; rej += Number(r.reject) || 0; });
+  return { demand, real, rej };
+}
+function opTypeTotals(rec){
+  const m = {};
+  OP_TYPES.forEach(tp => { m[tp] = 0; });
+  rec.hours_data.forEach(r => (r.rejects || []).forEach(x => { if(m[x.type] !== undefined) m[x.type] += Number(x.qty) || 0; }));
+  return m;
+}
+
+function opIsCurrent(rec){ const sh = opCurrentShift(); return rec.sheet_date === sh.date && rec.shift === sh.key; }
+function opIsReadOnly(rec){ return !opIsCurrent(rec) && !(state.currentUser && state.currentUser.role === 'admin'); }
+async function opLoadOrCreate(no, date, shiftKey, create){
+  const key = { table_no: no, sheet_date: date, shift: shiftKey };
+  let res = await sb.from('op_tables').select('*').match(key).maybeSingle();
+  if(res.error) throw res.error;
+  if(!res.data){
+    if(!create) return null;
+    const who = state.currentUser ? state.currentUser.name : '';
+    const row = Object.assign({}, key, { ref: '', qty_total: 0, hours_data: opBlankRows(OP_H1[shiftKey]), created_by: who, updated_by: who });
+    const up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
+    if(up.error) throw up.error;
+    res = await sb.from('op_tables').select('*').match(key).single();
+    if(res.error) throw res.error;
+  }
+  return opNormalize(res.data);
+}
+async function opPersist(showOk){
+  const r = state.opRec;
+  if(!r) return;
+  try{
+    const { error } = await sb.from('op_tables').update({
+      ref: r.ref || '', qty_total: r.qty_total || 0, hours_data: r.hours_data,
+      updated_by: state.currentUser ? state.currentUser.name : '', updated_at: new Date().toISOString()
+    }).eq('id', r.id);
+    if(error) throw error;
+    if(showOk) showToast(opT('saved'));
+  }catch(e){
+    console.error('opPersist error:', e);
+    showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
+  }
+}
+async function opOpenTable(no, o){
+  o = o || {};
+  try{
+    const sh = opCurrentShift();
+    const date = o.date || sh.date, shiftKey = o.shift || sh.key;
+    const isCur = date === sh.date && shiftKey === sh.key;
+    const rec = await opLoadOrCreate(no, date, shiftKey, isCur);
+    if(!rec){ showToast(opT('noData'), true); return; }
+    state.opRec = rec;
+    state.opFrom = o.from || 'portal';
+    state.view = 'op-table';
+    render();
+  }catch(e){
+    console.error('opOpenTable error:', e);
+    showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
+  }
+}
+async function opSwitchTable(n){
+  const r = state.opRec;
+  if(!r || n === r.table_no) return;
+  if(!opIsReadOnly(r)) await opPersist(false);
+  await opOpenTable(n, { date: r.sheet_date, shift: r.shift, from: state.opFrom });
+}
+
+const OP_CSS = `
+  .op-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-top:6px}
+  .op-tile{background:#2f6fc4;color:#fff;border-radius:4px;padding:18px 16px;cursor:pointer;border:1px solid #4a85d6;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+  .op-tile:hover{background:#3a7bd3}
+  .op-tile-name{font-weight:700;font-size:17px;line-height:1.25}
+  .op-tile-stat{font-size:12px;opacity:.9}
+  .op-head{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin:0 0 14px}
+  .op-hl{font-size:12px;text-align:center;background:var(--panel-alt);border:1px solid var(--border);padding:5px 4px;border-radius:3px;color:var(--text)}
+  .op-hv{display:flex;align-items:center;justify-content:center;min-height:58px;font-weight:700;font-size:24px;border-radius:3px;margin-top:4px;overflow:hidden;text-align:center;padding:2px}
+  .op-light{background:#e6ebf2;color:#1a2230;font-size:15px}
+  .op-green{background:#43a52f;color:#fff}
+  .op-blue{background:#27a1dc;color:#fff}
+  .op-red{background:#e3162c;color:#fff}
+  .op-yellow{background:#f0df2c;color:#1c1c1c}
+  .op-gray{background:#4a4f59;color:#fff}
+  .op-hv input{width:100%;height:100%;min-height:54px;background:transparent;border:0;outline:0;text-align:center;font:inherit;color:inherit;padding:0 4px}
+  .op-hv input::placeholder{color:rgba(255,255,255,.55);font-weight:400}
+  .op-scroll{overflow-x:auto}
+  .op-table{width:100%;min-width:640px;border-collapse:separate;border-spacing:4px}
+  .op-table th{background:#e6ebf2;color:#1a2230;font-size:13px;padding:8px 6px;border-radius:2px}
+  .op-table td{height:46px;text-align:center;font-weight:700;font-size:17px;border-radius:2px;padding:4px 8px}
+  .op-row{cursor:pointer}
+  .op-row:hover td{filter:brightness(1.12)}
+  .op-table .c-time{background:#e6ebf2;color:#1a2230;font-size:14px;white-space:nowrap}
+  .op-table .c-prod{background:#27a1dc;color:#fff;font-size:14px}
+  .op-table .c-dem{background:#e3162c;color:#fff}
+  .op-table .c-real{background:#f0df2c;color:#1c1c1c}
+  .op-table .c-rej{background:#4a4f59;color:#fff}
+  .op-table .c-com{background:var(--panel);border:1px solid var(--border);color:var(--text);font-weight:400;font-size:13px;text-align:start;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .op-total td{background:transparent;color:var(--text);font-size:22px;border-top:2px solid var(--blue);border-radius:0}
+  .op-total td:first-child{text-align:start;font-size:20px}
+  .op-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .op-chip{background:#2f6fc4;color:#fff;border-radius:3px;padding:7px 12px;font-size:13px;display:flex;gap:8px;align-items:center}
+  .op-chip b{background:rgba(255,255,255,.22);border-radius:10px;padding:1px 8px;font-size:13px}
+  .op-hint{font-size:12px;color:var(--text-muted);margin:10px 0 0}
+  .op-ov{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:14px}
+  .op-modal{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px;width:min(440px,100%);max-height:92vh;overflow:auto;color:var(--text)}
+  .op-m-title{text-align:center;font-weight:700;font-size:16px;margin-bottom:14px;padding:8px;border:1px solid var(--border);border-radius:3px;background:var(--panel-alt)}
+  .op-m-row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;margin-bottom:12px}
+  .op-m-row label,.op-m-blk label{font-weight:600;font-size:14px;margin:0}
+  .op-m-time{background:#e6ebf2;color:#1a2230;border-radius:3px;padding:8px;text-align:center;font-weight:700}
+  .op-modal input,.op-modal select,.op-modal textarea{width:100%;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:9px;font-size:16px;font-family:inherit}
+  .op-m-blk{margin-bottom:12px}
+  .op-m-blk label{display:block;margin-bottom:6px}
+  .op-rj{display:grid;grid-template-columns:1fr 92px 36px;gap:6px;margin-bottom:6px}
+  .op-x{background:var(--danger);color:#fff;border:0;border-radius:3px;font-size:18px;cursor:pointer}
+  .op-add{background:transparent;color:var(--blue);border:1px dashed var(--blue);border-radius:3px;padding:7px 10px;cursor:pointer;font-size:13px;font-family:inherit}
+  .op-m-actions{display:flex;gap:10px;margin-top:6px}
+  .op-m-actions .btn{flex:1}
+  .op-cancel{background:var(--panel-alt)!important;color:var(--text)!important;border:1px solid var(--border)!important}
+  .op-hv{height:58px}
+  .op-hv input{min-height:0;height:100%!important;padding:0 4px!important;margin:0!important;line-height:normal}
+  #op-ref{font-size:18px}
+  .op-modal input,.op-modal select,.op-modal textarea{margin:0}
+  @media (max-width:640px){
+    .op-head{grid-template-columns:repeat(3,1fr);gap:6px}
+    .op-hv{height:50px;font-size:20px}
+    #op-ref{font-size:14px}
+    .op-light{font-size:13px}
+    .op-table{min-width:0;table-layout:fixed;border-spacing:2px}
+    .op-table th{font-size:9px;padding:5px 1px;text-transform:none!important;letter-spacing:0!important;overflow:hidden}
+    .op-table td{height:42px;padding:2px;font-size:14px}
+    .op-table th:nth-child(1){width:23%} .op-table th:nth-child(2){width:22%} .op-table th:nth-child(3){width:14%}
+    .op-table th:nth-child(4){width:14%} .op-table th:nth-child(5){width:12%} .op-table th:nth-child(6){width:15%}
+    .op-table .c-time{font-size:11px;white-space:normal}
+    .op-table .c-prod{font-size:10px;word-break:break-all}
+    .op-table .c-com{font-size:11px;padding:2px 4px}
+    .op-total td{font-size:16px}
+    .op-total td:first-child{font-size:15px}
+  }
+  .op-nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+  .op-nb{min-width:46px;padding:9px 12px;background:#2f6fc4;color:#fff;border:1px solid #4a85d6;border-radius:3px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px}
+  .op-nb.on{background:var(--accent);color:#161311;border-color:var(--accent)}
+  .op-ro{display:inline-block;background:var(--danger);color:#fff;border-radius:3px;padding:2px 8px;font-size:12px;margin-inline-start:8px}
+  .op-hist-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px}
+  .op-hist-bar input{background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:9px;font-size:16px;margin:0;width:auto}
+  .op-hist-bar button{background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:9px 14px;cursor:pointer;font-family:inherit;font-size:15px}
+  .op-sec{margin:0 0 24px}
+  .op-sec h3{margin:0 0 4px;font-size:16px}
+  .op-sec-tot{font-size:13px;color:var(--text-muted);margin:0 0 10px}
+  .op-tile.off{background:var(--panel-alt);border-color:var(--border);color:var(--text-muted);cursor:default;opacity:.55}
+  .op-tile.off:hover{background:var(--panel-alt)}
+`;
+
+function renderOpPortal(main){
+  const sh = opCurrentShift();
+  main.innerHTML = `<style>${OP_CSS}</style>
+    <div class="back-link" id="op-back" style="margin-bottom:14px;">${ICONS.back} ${t('menuTitle')}</div>
+    <div class="menu-head"><h1>${opT('portal')}</h1><p>${opT('team')} : <strong>${opShiftLabel(sh.h1)}</strong> &mdash; ${sh.date}</p></div>
+    <div class="op-nav" style="margin-bottom:16px;"><button type="button" class="op-nb" id="op-hist" style="padding:11px 18px;">&#128197; ${opT('history')}</button></div>
+    <div class="op-tiles">${Array.from({ length: 8 }, (_, i) => `
+      <div class="op-tile" data-no="${i + 1}"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div><div class="op-tile-stat" id="op-stat-${i + 1}">&nbsp;</div></div>`).join('')}
+    </div>`;
+  document.getElementById('op-back').onclick = () => { state.view = 'menu'; render(); };
+  document.getElementById('op-hist').onclick = () => { state.opHistDate = null; state.view = 'op-history'; render(); };
+  main.querySelectorAll('.op-tile').forEach(el => { el.onclick = () => opOpenTable(+el.dataset.no, { from: 'portal' }); });
+  (async () => {
+    try{
+      const { data, error } = await sb.from('op_tables').select('table_no, qty_total, hours_data').eq('sheet_date', sh.date).eq('shift', sh.key);
+      if(error) throw error;
+      (data || []).forEach(r => {
+        const el = document.getElementById('op-stat-' + r.table_no);
+        if(!el) return;
+        let real = 0, rej = 0;
+        (r.hours_data || []).forEach(x => { real += Number(x.real) || 0; rej += Number(x.reject) || 0; });
+        el.textContent = `R\u00e9el ${real} / Qtite ${Number(r.qty_total) || 0} \u00b7 Rejet ${rej}`;
+      });
+    }catch(e){
+      console.error('op overview error:', e);
+      showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
+    }
+  })();
+}
+
+function opRefreshCells(){
+  const rec = state.opRec;
+  if(!rec) return;
+  const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v === null || v === undefined) ? '' : String(v); };
+  const tot = opTotals(rec);
+  rec.hours_data.forEach((r, i) => {
+    set('op-p' + i, rec.ref || '');
+    set('op-d' + i, r.demand);
+    set('op-a' + i, r.real === null || r.real === undefined ? '' : r.real);
+    set('op-j' + i, r.reject ? r.reject : '');
+    set('op-c' + i, r.comment || '');
+  });
+  set('op-h-real', tot.real); set('op-h-rej', tot.rej);
+  set('op-t-dem', tot.demand); set('op-t-real', tot.real); set('op-t-rej', tot.rej);
+  const byType = opTypeTotals(rec);
+  OP_TYPES.forEach((tp, k) => set('op-chip-' + k, byType[tp]));
+}
+
+function renderOpTable(main){
+  const rec = state.opRec;
+  if(!rec){ state.view = 'op-portal'; return render(); }
+  const h1 = OP_H1[rec.shift] || 5;
+  const ro = opIsReadOnly(rec);
+  const fromHist = state.opFrom === 'history';
+  main.innerHTML = `<style>${OP_CSS}</style>
+    <div class="back-link" id="op-back" style="margin-bottom:12px;">${ICONS.back} ${fromHist ? opT('history') : opT('portal')}${ro ? `<span class="op-ro">${opT('readonly')}</span>` : ''}</div>
+    <div class="op-nav">${Array.from({ length: 8 }, (_, i) => `<button type="button" class="op-nb${rec.table_no === i + 1 ? ' on' : ''}" data-no="${i + 1}">${opPad(i + 1)}</button>`).join('')}</div>
+    <div class="op-head">
+      <div><div class="op-hl">Table</div><div class="op-hv op-light">Table de contr\u00f4le ${opPad(rec.table_no)}</div></div>
+      <div><div class="op-hl">Date</div><div class="op-hv op-light">${escHtml(rec.sheet_date)}</div></div>
+      <div><div class="op-hl">Equipe</div><div class="op-hv op-green">${opShiftLabel(h1)}</div></div>
+      <div><div class="op-hl">ref</div><div class="op-hv op-blue"><input id="op-ref" type="text" autocomplete="off" placeholder="ref"></div></div>
+      <div><div class="op-hl">Qtite</div><div class="op-hv op-red"><input id="op-qty" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div></div>
+      <div><div class="op-hl">Qtite R\u00e9el</div><div class="op-hv op-yellow" id="op-h-real">0</div></div>
+      <div><div class="op-hl">Qtite Rejet</div><div class="op-hv op-gray" id="op-h-rej">0</div></div>
+    </div>
+    <div class="op-scroll"><table class="op-table">
+      <thead><tr><th>Nom / Temps</th><th>Produit Actuel</th><th>Demande</th><th>R\u00e9el</th><th>Rejet</th><th>Commentaires</th></tr></thead>
+      <tbody>${rec.hours_data.map((r, i) => `
+        <tr class="op-row" data-i="${i}">
+          <td class="c-time">${escHtml(r.time)}</td><td class="c-prod" id="op-p${i}"></td><td class="c-dem" id="op-d${i}"></td>
+          <td class="c-real" id="op-a${i}"></td><td class="c-rej" id="op-j${i}"></td><td class="c-com" id="op-c${i}"></td>
+        </tr>`).join('')}
+        <tr class="op-total"><td>Total</td><td>\u2026\u2026\u2026\u2026</td><td id="op-t-dem">0</td><td id="op-t-real">0</td><td id="op-t-rej">0</td><td></td></tr>
+      </tbody>
+    </table></div>
+    <div class="op-chips">${OP_TYPES.map((tp, k) => `<div class="op-chip">${tp}<b id="op-chip-${k}">0</b></div>`).join('')}</div>
+    <p class="op-hint">${ro ? '' : opT('hint')}</p>`;
+
+  const refEl = document.getElementById('op-ref'), qtyEl = document.getElementById('op-qty');
+  refEl.value = rec.ref || '';
+  qtyEl.value = rec.qty_total ? String(rec.qty_total) : '';
+  if(ro){ refEl.disabled = true; qtyEl.disabled = true; }
+  refEl.oninput = () => { if(ro) return; rec.ref = refEl.value.trim(); opRefreshCells(); };
+  refEl.onchange = () => { if(!ro) opPersist(false); };
+  qtyEl.oninput = () => {
+    if(ro) return;
+    rec.qty_total = Math.max(0, Math.floor(Number(qtyEl.value) || 0));
+    const parts = opDistribute(rec.qty_total);
+    rec.hours_data.forEach((r, i) => { r.demand = parts[i]; });
+    opRefreshCells();
+  };
+  qtyEl.onchange = () => { if(!ro) opPersist(false); };
+  main.querySelectorAll('.op-row').forEach(tr => { tr.onclick = () => opOpenPopup(+tr.dataset.i, ro); });
+  main.querySelectorAll('.op-nb').forEach(b => { b.onclick = () => opSwitchTable(+b.dataset.no); });
+  document.getElementById('op-back').onclick = async () => {
+    if(!ro) await opPersist(false);
+    state.opRec = null;
+    state.view = fromHist ? 'op-history' : 'op-portal';
+    render();
+  };
+  opRefreshCells();
+}
+
+/* Tableau de remplissage (fen\u00eatre surgissante) */
+function opOpenPopup(i, ro){
+  const rec = state.opRec, row = rec.hours_data[i];
+  const ov = document.createElement('div');
+  ov.className = 'op-ov';
+  ov.innerHTML = `<div class="op-modal">
+    <div class="op-m-title">Tableau de remplissage</div>
+    <div class="op-m-row"><label>Temps :</label><div class="op-m-time" id="op-m-time"></div></div>
+    <div class="op-m-row"><label>R\u00e9el :</label><input id="op-m-real" type="number" min="0" step="1" inputmode="numeric"></div>
+    <div class="op-m-blk"><label>Type de rejet :</label><div id="op-m-lines"></div><button type="button" class="op-add" id="op-m-add">${opT('add')}</button></div>
+    <div class="op-m-blk"><label>Commentaires :</label><textarea id="op-m-com" rows="3"></textarea></div>
+    <div class="op-m-actions"><button type="button" class="btn" id="op-m-save">Enregistrer</button><button type="button" class="btn op-cancel" id="op-m-cancel">Annuler</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const $ = (id) => ov.querySelector('#' + id);
+  $('op-m-time').textContent = row.time;
+  $('op-m-real').value = (row.real === null || row.real === undefined) ? '' : String(row.real);
+  $('op-m-com').value = row.comment || '';
+  const lines = [], box = $('op-m-lines');
+  function addLine(type, qty){
+    const wrap = document.createElement('div'); wrap.className = 'op-rj';
+    const sel = document.createElement('select');
+    OP_TYPES.forEach(tp => { const o = document.createElement('option'); o.value = tp; o.textContent = tp; sel.appendChild(o); });
+    sel.value = OP_TYPES.indexOf(type) >= 0 ? type : OP_TYPES[0];
+    const q = document.createElement('input'); q.type = 'number'; q.min = '0'; q.step = '1'; q.inputMode = 'numeric'; q.placeholder = '0';
+    q.value = qty ? String(qty) : '';
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'op-x'; x.textContent = '\u00d7';
+    const item = { wrap, sel, q };
+    x.onclick = () => { wrap.remove(); lines.splice(lines.indexOf(item), 1); };
+    wrap.append(sel, q, x); box.appendChild(wrap); lines.push(item);
+  }
+  (row.rejects && row.rejects.length ? row.rejects : [{}]).forEach(r => addLine(r.type, r.qty));
+  $('op-m-add').onclick = () => addLine('', 0);
+  const onKey = (e) => { if(e.key === 'Escape') close(); };
+  function close(){ document.removeEventListener('keydown', onKey); ov.remove(); }
+  document.addEventListener('keydown', onKey);
+  $('op-m-cancel').onclick = close;
+  ov.addEventListener('mousedown', (e) => { if(e.target === ov) close(); });
+  $('op-m-save').onclick = async () => {
+    const realRaw = $('op-m-real').value;
+    row.real = realRaw === '' ? null : Math.max(0, Math.floor(Number(realRaw) || 0));
+    const rejects = [];
+    lines.forEach(l => { const qn = Math.max(0, Math.floor(Number(l.q.value) || 0)); if(qn > 0) rejects.push({ type: l.sel.value, qty: qn }); });
+    row.rejects = rejects;
+    row.reject = rejects.reduce((s, x) => s + x.qty, 0);
+    row.comment = $('op-m-com').value.trim();
+    close();
+    opRefreshCells();
+    await opPersist(true);
+  };
+  if(ro){
+    ov.querySelectorAll('input, select, textarea').forEach(e => { e.disabled = true; });
+    ['op-m-save', 'op-m-add'].forEach(id => { const e = $(id); if(e) e.style.display = 'none'; });
+    ov.querySelectorAll('.op-x').forEach(e => { e.style.display = 'none'; });
+    $('op-m-cancel').textContent = opT('close');
+  }else{
+    setTimeout(() => { const r = $('op-m-real'); if(r) r.focus(); }, 50);
+  }
+}
+
+/* Historique : donn\u00e9es enregistr\u00e9es par jour, \u00e9quipe et heure */
+function opShiftName(key){ return opT(key === 'morning' ? 'sMorning' : key === 'afternoon' ? 'sAfter' : 'sNight'); }
+function opShiftDate(iso, delta){
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
+}
+function renderOpHistory(main){
+  const today = opCurrentShift().date;
+  const date = state.opHistDate || today;
+  state.opHistDate = date;
+  main.innerHTML = `<style>${OP_CSS}</style>
+    <div class="back-link" id="op-back" style="margin-bottom:14px;">${ICONS.back} ${opT('portal')}</div>
+    <div class="menu-head"><h1>${opT('history')}</h1><p>${opT('histSub')}</p></div>
+    <div class="op-hist-bar">
+      <button type="button" id="op-prev">&lsaquo;</button>
+      <input type="date" id="op-date">
+      <button type="button" id="op-next">&rsaquo;</button>
+      <button type="button" id="op-today">${opT('today')}</button>
+    </div>
+    <div id="op-hist-body">${opT('loading')}</div>`;
+  const dateEl = document.getElementById('op-date');
+  dateEl.value = date;
+  const go = (d) => { if(!d) return; state.opHistDate = d; renderOpHistory(main); };
+  document.getElementById('op-back').onclick = () => { state.view = 'op-portal'; render(); };
+  document.getElementById('op-prev').onclick = () => go(opShiftDate(date, -1));
+  document.getElementById('op-next').onclick = () => go(opShiftDate(date, 1));
+  document.getElementById('op-today').onclick = () => go(today);
+  dateEl.onchange = () => go(dateEl.value);
+  (async () => {
+    const body = document.getElementById('op-hist-body');
+    try{
+      const { data, error } = await sb.from('op_tables').select('table_no, shift, ref, qty_total, hours_data, updated_at').eq('sheet_date', date);
+      if(error) throw error;
+      const rows = data || [];
+      if(!document.getElementById('op-hist-body')) return;
+      body.innerHTML = ['morning', 'afternoon', 'night'].map(sk => {
+        const h1 = OP_H1[sk];
+        const recs = rows.filter(r => r.shift === sk);
+        let real = 0, rej = 0, qty = 0;
+        recs.forEach(r => { qty += Number(r.qty_total) || 0; (r.hours_data || []).forEach(x => { real += Number(x.real) || 0; rej += Number(x.reject) || 0; }); });
+        const tiles = Array.from({ length: 8 }, (_, i) => {
+          const r = recs.find(x => x.table_no === i + 1);
+          if(!r) return `<div class="op-tile off"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div><div class="op-tile-stat">&mdash;</div></div>`;
+          let rr = 0, jj = 0;
+          (r.hours_data || []).forEach(x => { rr += Number(x.real) || 0; jj += Number(x.reject) || 0; });
+          const tm = r.updated_at ? new Date(r.updated_at).toLocaleTimeString('fr-FR', { timeZone: 'Africa/Tunis', hour: '2-digit', minute: '2-digit' }) : '';
+          return `<div class="op-tile" data-no="${i + 1}" data-shift="${sk}"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div>
+            <div class="op-tile-stat">${escHtml(r.ref || '')}<br>R\u00e9el ${rr} / Qtite ${Number(r.qty_total) || 0} &middot; Rejet ${jj}<br>${opT('last')} ${tm}</div></div>`;
+        }).join('');
+        return `<div class="op-sec"><h3>${opShiftName(sk)} &mdash; ${opShiftLabel(h1)}</h3>
+          <p class="op-sec-tot">${opT('teamTot')} : R\u00e9el ${real} / Qtite ${qty} &middot; Rejet ${rej}</p>
+          <div class="op-tiles">${tiles}</div></div>`;
+      }).join('');
+      body.querySelectorAll('.op-tile[data-no]').forEach(el => {
+        el.onclick = () => opOpenTable(+el.dataset.no, { date, shift: el.dataset.shift, from: 'history' });
+      });
+    }catch(e){
+      console.error('op history error:', e);
+      body.textContent = '';
+      showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
+    }
+  })();
 }
 
 /* ================= EXPORT EXCEL (Stock) ================= */
