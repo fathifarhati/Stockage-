@@ -2688,6 +2688,9 @@ const OP_I18N = {
   add:     { fr: '+ Ajouter un type de rejet', ar: '+ إضافة نوع مرفوض' },
   hint:    { fr: 'Touchez une ligne pour saisir le réel, les rejets et les commentaires.', ar: 'المس أي سطر لإدخال الكمية الفعلية والمرفوضات والتعليقات.' },
   history: { fr: 'Historique', ar: 'السجل' },
+  needSql: { fr: "Colonne employee_name absente : exécutez 14_op_employee.sql (le nom de l'opérateur n'est pas enregistré)", ar: 'عمود employee_name غير موجود: شغّل ملف 14_op_employee.sql (اسم المشغّل لن يُحفظ)' },
+  needComment: { fr: 'Commentaire obligatoire : le réel est inférieur à la demande', ar: 'التعليق إلزامي: الكمية الفعلية أقل من الطلب' },
+  req:     { fr: '(obligatoire)', ar: '(إلزامي)' },
   histSub: { fr: 'Données enregistrées par jour, équipe et heure', ar: 'البيانات المحفوظة حسب اليوم والفريق والساعة' },
   today:   { fr: "Aujourd'hui", ar: 'اليوم' },
   noData:  { fr: 'Aucune donnée pour cette table à cette période', ar: 'لا توجد بيانات لهذه الطاولة في هذه الفترة' },
@@ -2733,6 +2736,7 @@ function opNormalize(rec){
   const src = Array.isArray(rec.hours_data) ? rec.hours_data : [];
   rec.hours_data = base.map((b, i) => Object.assign(b, src[i] || {}));
   rec.ref = rec.ref || '';
+  rec.employee_name = rec.employee_name || '';
   rec.qty_total = Number(rec.qty_total) || 0;
   return rec;
 }
@@ -2763,8 +2767,12 @@ async function opLoadOrCreate(no, date, shiftKey, create){
   if(!res.data){
     if(!create) return null;
     const who = state.currentUser ? state.currentUser.name : '';
-    const row = Object.assign({}, key, { ref: '', qty_total: 0, hours_data: opBlankRows(OP_H1[shiftKey]), created_by: who, updated_by: who });
-    const up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
+    const row = Object.assign({}, key, { ref: '', qty_total: 0, hours_data: opBlankRows(OP_H1[shiftKey]), created_by: who, updated_by: who, employee_name: who });
+    let up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
+    if(up.error && /employee_name/i.test(up.error.message || '')){
+      delete row.employee_name;
+      up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
+    }
     if(up.error) throw up.error;
     res = await sb.from('op_tables').select('*').match(key).single();
     if(res.error) throw res.error;
@@ -2775,10 +2783,16 @@ async function opPersist(showOk){
   const r = state.opRec;
   if(!r) return;
   try{
-    const { error } = await sb.from('op_tables').update({
-      ref: r.ref || '', qty_total: r.qty_total || 0, hours_data: r.hours_data,
+    const payload = {
+      ref: r.ref || '', qty_total: r.qty_total || 0, hours_data: r.hours_data, employee_name: r.employee_name || '',
       updated_by: state.currentUser ? state.currentUser.name : '', updated_at: new Date().toISOString()
-    }).eq('id', r.id);
+    };
+    let { error } = await sb.from('op_tables').update(payload).eq('id', r.id);
+    if(error && /employee_name/i.test(error.message || '')){
+      delete payload.employee_name;
+      ({ error } = await sb.from('op_tables').update(payload).eq('id', r.id));
+      if(!error && !state.opEmpWarned){ state.opEmpWarned = true; showToast(opT('needSql'), true); return; }
+    }
     if(error) throw error;
     if(showOk) showToast(opT('saved'));
   }catch(e){
@@ -2793,14 +2807,16 @@ async function opOpenTable(no, o){
     const date = o.date || sh.date, shiftKey = o.shift || sh.key;
     const isCur = date === sh.date && shiftKey === sh.key;
     const rec = await opLoadOrCreate(no, date, shiftKey, isCur);
-    if(!rec){ showToast(opT('noData'), true); return; }
+    if(!rec){ showToast(opT('noData'), true); return false; }
     state.opRec = rec;
     state.opFrom = o.from || 'portal';
     state.view = 'op-table';
     render();
+    return true;
   }catch(e){
     console.error('opOpenTable error:', e);
     showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
+    return false;
   }
 }
 async function opSwitchTable(n){
@@ -2819,38 +2835,39 @@ const OP_CSS = `
   .op-head{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin:0 0 14px}
   .op-hl{font-size:12px;text-align:center;background:var(--panel-alt);border:1px solid var(--border);padding:5px 4px;border-radius:3px;color:var(--text)}
   .op-hv{display:flex;align-items:center;justify-content:center;min-height:58px;font-weight:700;font-size:24px;border-radius:3px;margin-top:4px;overflow:hidden;text-align:center;padding:2px}
-  .op-light{background:#e6ebf2;color:#1a2230;font-size:15px}
-  .op-green{background:#43a52f;color:#fff}
-  .op-blue{background:#27a1dc;color:#fff}
-  .op-red{background:#e3162c;color:#fff}
-  .op-yellow{background:#f0df2c;color:#1c1c1c}
-  .op-gray{background:#4a4f59;color:#fff}
+  .op-light{background:#fff;color:#1a2230;font-size:15px}
+  .op-num{font-size:24px}
+  .op-green{background:#fff;color:#1a2230}
+  .op-blue{background:#fff;color:#1a2230}
+  .op-red{background:#fff;color:#1a2230}
+  .op-yellow{background:#fff;color:#1a2230}
+  .op-gray{background:#fff;color:#1a2230}
   .op-hv input{width:100%;height:100%;min-height:54px;background:transparent;border:0;outline:0;text-align:center;font:inherit;color:inherit;padding:0 4px}
-  .op-hv input::placeholder{color:rgba(255,255,255,.55);font-weight:400}
+  .op-hv input::placeholder{color:#8a93a3;font-weight:400}
   .op-scroll{overflow-x:auto}
   .op-table{width:100%;min-width:640px;border-collapse:separate;border-spacing:4px}
-  .op-table th{background:#e6ebf2;color:#1a2230;font-size:13px;padding:8px 6px;border-radius:2px}
+  .op-table th{background:#fff;color:#1a2230;font-size:13px;padding:8px 6px;border-radius:2px}
   .op-table td{height:46px;text-align:center;font-weight:700;font-size:17px;border-radius:2px;padding:4px 8px}
   .op-row{cursor:pointer}
   .op-row:hover td{filter:brightness(1.12)}
-  .op-table .c-time{background:#e6ebf2;color:#1a2230;font-size:14px;white-space:nowrap}
-  .op-table .c-prod{background:#27a1dc;color:#fff;font-size:14px}
-  .op-table .c-dem{background:#e3162c;color:#fff}
-  .op-table .c-real{background:#f0df2c;color:#1c1c1c}
-  .op-table .c-rej{background:#4a4f59;color:#fff}
+  .op-table .c-time{background:#fff;color:#1a2230;font-size:14px;white-space:nowrap}
+  .op-table .c-prod{background:#fff;color:#1a2230;font-size:14px}
+  .op-table .c-dem{background:#fff;color:#1a2230}
+  .op-table .c-real{background:#fff;color:#1a2230}
+  .op-table .c-rej{background:#fff;color:#1a2230}
   .op-table .c-com{background:var(--panel);border:1px solid var(--border);color:var(--text);font-weight:400;font-size:13px;text-align:start;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .op-total td{background:transparent;color:var(--text);font-size:22px;border-top:2px solid var(--blue);border-radius:0}
   .op-total td:first-child{text-align:start;font-size:20px}
   .op-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-  .op-chip{background:#2f6fc4;color:#fff;border-radius:3px;padding:7px 12px;font-size:13px;display:flex;gap:8px;align-items:center}
-  .op-chip b{background:rgba(255,255,255,.22);border-radius:10px;padding:1px 8px;font-size:13px}
+  .op-chip{background:#fff;color:#1a2230;border-radius:3px;padding:7px 12px;font-size:13px;display:flex;gap:8px;align-items:center}
+  .op-chip b{background:#e6ebf2;border-radius:10px;padding:1px 8px;font-size:13px}
   .op-hint{font-size:12px;color:var(--text-muted);margin:10px 0 0}
   .op-ov{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:14px}
   .op-modal{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px;width:min(440px,100%);max-height:92vh;overflow:auto;color:var(--text)}
   .op-m-title{text-align:center;font-weight:700;font-size:16px;margin-bottom:14px;padding:8px;border:1px solid var(--border);border-radius:3px;background:var(--panel-alt)}
   .op-m-row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;margin-bottom:12px}
   .op-m-row label,.op-m-blk label{font-weight:600;font-size:14px;margin:0}
-  .op-m-time{background:#e6ebf2;color:#1a2230;border-radius:3px;padding:8px;text-align:center;font-weight:700}
+  .op-m-time{background:#fff;color:#1a2230;border-radius:3px;padding:8px;text-align:center;font-weight:700}
   .op-modal input,.op-modal select,.op-modal textarea{width:100%;background:var(--panel-alt);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:9px;font-size:16px;font-family:inherit}
   .op-m-blk{margin-bottom:12px}
   .op-m-blk label{display:block;margin-bottom:6px}
@@ -2865,7 +2882,10 @@ const OP_CSS = `
   #op-ref{font-size:18px}
   .op-modal input,.op-modal select,.op-modal textarea{margin:0}
   @media (max-width:640px){
-    .op-head{grid-template-columns:repeat(3,1fr);gap:6px}
+    .op-head{grid-template-columns:repeat(2,1fr);gap:6px}
+    .op-c-qty{grid-column:span 2}
+    .op-kpi{grid-template-columns:repeat(3,1fr);gap:6px}
+    .op-hl{font-size:11px}
     .op-hv{height:50px;font-size:20px}
     #op-ref{font-size:14px}
     .op-light{font-size:13px}
@@ -2892,6 +2912,112 @@ const OP_CSS = `
   .op-sec-tot{font-size:13px;color:var(--text-muted);margin:0 0 10px}
   .op-tile.off{background:var(--panel-alt);border-color:var(--border);color:var(--text-muted);cursor:default;opacity:.55}
   .op-tile.off:hover{background:var(--panel-alt)}
+  #op-name{font-size:14px;font-weight:700;white-space:nowrap;text-overflow:ellipsis;cursor:default;pointer-events:none}
+  .op-table .c-real.c-short,.op-hv.c-short{background:#e3162c!important;color:#fff!important}
+  .op-modal #op-m-dem{background:#fff;color:#1a2230;font-weight:700;text-align:center;opacity:1}
+  .op-modal textarea.op-need{border-color:#e3162c;box-shadow:0 0 0 2px rgba(227,22,44,.45)}
+  .op-req{color:#ff6b6b;font-weight:700;font-size:12px;margin-inline-start:6px}
+  #op-name{padding:0 6px!important}
+  .op-hl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .op-table td:not(.c-com){border:1px solid #cfd6e2}
+  .op-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:0 0 14px}
+  @media (min-width:900px){
+    .op-head{grid-template-columns:minmax(210px,1.7fr) minmax(160px,1.3fr) repeat(4,minmax(96px,1fr))}
+    .op-kpi{grid-template-columns:repeat(5,1fr)}
+  }
+  @media (max-width:640px){ #op-name{font-size:13px} .op-head > div:first-child{grid-column:span 2} }
+`;
+
+const OP2_CSS = `
+  .op2{background:#f4f6f9;color:#1d2433;border-radius:6px;overflow:hidden;border:1px solid #d5dbe5;font-size:14px}
+  .op2 *{box-sizing:border-box}
+  .op2-crumbs{padding:10px 14px;font-size:13px;color:#4b5565;background:#fff;border-bottom:1px solid #e3e8ef;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .op2-crumbs a{color:#1d5fb8;cursor:pointer;text-decoration:underline}
+  .op2-title{background:#2e333b;color:#fff;font-weight:700;padding:11px 14px;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .op2-ro{background:#d32f3f;color:#fff;border-radius:3px;padding:2px 9px;font-size:12px;font-weight:600}
+  .op2-body{padding:12px}
+  .op2-sumwrap{overflow-x:auto;margin-bottom:12px}
+  .op2-sum{width:100%;border-collapse:collapse;background:#fff}
+  .op2-sum th,.op2-sum td{border:1px solid #d9dee7;padding:8px 10px}
+  .op2-sum thead th{background:#eef1f6;font-size:12.5px;text-align:center;white-space:nowrap}
+  .op2-sum tbody th{text-align:left;font-weight:600;font-size:15px;background:#fff;white-space:nowrap}
+  .op2-sum td{text-align:right;font-size:18px;font-weight:600}
+  .op2-sum td.good{background:#1f9d4a;color:#fff}
+  .op2-sum td.bad{background:#d32f3f;color:#fff}
+  .op2-sum td.warn{background:#f2a516;color:#1c1c1c}
+  .op2-bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:0 0 10px}
+  .op2-bar label{font-size:13px;font-weight:600;margin:0}
+  .op2-datebar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .op2-bar select,.op2-bar input[type=date]{border:1px solid #b9c1ce;border-radius:3px;padding:7px 9px;background:#fff;color:#1d2433;font-size:14px;margin:0;width:auto;font-family:inherit}
+  .op2-btn{border:1px solid #b9c1ce;background:#fff;color:#1d2433;border-radius:3px;padding:7px 12px;cursor:pointer;font-size:14px;font-family:inherit;margin:0;width:auto}
+  .op2-btn:hover{background:#eef1f6}
+  .op2-btn.primary{background:#1d5fb8;border-color:#1d5fb8;color:#fff;font-weight:600}
+  .op2-btn.primary:hover{background:#2a70cf}
+  .op2-pills{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 12px}
+  .op2-pill{border:1px solid #b9c1ce;background:#fff;color:#1d2433;border-radius:14px;padding:5px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin:0;width:auto}
+  .op2-pill:hover{background:#eef1f6}
+  .op2-pill.on{background:#1d5fb8;border-color:#1d5fb8;color:#fff}
+  .op2-params{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:0 0 14px;background:#fff;border:1px solid #d9dee7;padding:12px;border-radius:4px}
+  .op2-params label{display:block;font-size:12px;font-weight:700;color:#4b5565;margin:0 0 4px}
+  .op2-params input{width:100%;margin:0;padding:9px 10px;border:1px solid #b9c1ce;border-radius:3px;background:#fff;color:#1d2433;font-size:15px;font-family:inherit}
+  .op2-params input[readonly]{background:#f1f3f7;font-weight:700}
+  .op2-params input:disabled{background:#f1f3f7;color:#1d2433;opacity:1}
+  .op2-scroll{overflow-x:auto;background:#fff;border:1px solid #d9dee7}
+  .op2-table{width:100%;border-collapse:collapse}
+  .op2-table th{background:#eef1f6;padding:10px 8px;font-size:13px;border:1px solid #d9dee7;text-align:center;color:#1d2433;text-transform:none;letter-spacing:0}
+  .op2-table td{border:1px solid #e1e5ec;padding:6px 8px;text-align:center;font-size:16px;background:#fff;height:46px;color:#1d2433}
+  .op2-row{cursor:pointer}
+  .op2-row:hover td{background:#f3f7fd}
+  .op2-table .c-exp{width:40px;padding:0}
+  .op2-table .c-act{width:52px;padding:0}
+  .op2-table .c-time{font-weight:700;text-align:left;white-space:nowrap}
+  .op2-table .c-time small{display:block;font-weight:600;font-size:11px;color:#1d5fb8}
+  .op2-table .c-prod{font-size:14px}
+  .op2-table .c-dem{font-weight:600}
+  .op2-table .c-real{font-weight:700}
+  .op2-table .c-real.c-short{background:#d32f3f;color:#fff}
+  .op2-table .c-real.c-miss{color:#b26a00;font-style:italic;font-size:13px;font-weight:400;background:#fff8e6}
+  .op2-table .c-com{text-align:left;font-size:13px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .op2-table tr.op2-now td{background:#fffbe0;box-shadow:inset 0 2px 0 #f2c200,inset 0 -2px 0 #f2c200}
+  .op2-table tr.op2-now td.c-real.c-short{background:#d32f3f}
+  .op2-arrow{width:30px;height:30px;border:0;background:transparent;font-size:22px;cursor:pointer;transition:transform .15s;color:#4b5565;margin:0;padding:0;width:auto}
+  .op2-arrow.open{transform:rotate(90deg)}
+  .op2-edit{border:1px solid #b9c1ce;background:#fff;color:#1d2433;border-radius:3px;width:36px;height:32px;cursor:pointer;font-size:16px;margin:0;padding:0}
+  .op2-edit:hover{background:#e8effa}
+  .op2-det td{background:#f7f9fc;text-align:left;font-size:13px;padding:10px 14px;height:auto}
+  .op2-total td{background:#eef1f6;font-weight:700;font-size:17px;height:44px}
+  .op2-total td.c-short{background:#d32f3f;color:#fff}
+  .op2-types{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .op2-tchip{background:#fff;border:1px solid #c6cdd9;border-radius:14px;padding:4px 11px;font-size:13px;display:inline-flex;gap:7px;align-items:center;color:#1d2433;margin:0 4px 4px 0}
+  .op2-tchip b{background:#e6ebf2;border-radius:10px;padding:0 7px}
+  .op2-table,.op2-sum{min-width:0!important}
+  .op2-params #op-name{padding:9px 10px!important;font-size:15px;height:auto;pointer-events:none}
+  .op2-params #op-ref{font-size:15px}
+  .op2-sum thead th,.op2-sum tbody th{text-transform:none;letter-spacing:0}
+  .op2-sum tbody th{color:#1d2433}
+  .op-modal{background:#fff;color:#1d2433;border-color:#c6cdd9}
+  .op-m-title{background:#eef1f6;border-color:#d0d6e0;color:#1d2433}
+  .op-modal input,.op-modal select,.op-modal textarea{background:#fff;color:#1d2433;border:1px solid #b9c1ce}
+  .op-modal #op-m-dem{background:#f1f3f7;color:#1d2433}
+  .op-m-time{background:#f1f3f7}
+  .op-cancel{background:#fff!important;color:#1d2433!important;border:1px solid #b9c1ce!important}
+  @media (max-width:640px){
+    .op2-body{padding:8px}
+    .op2 .col-com{display:none}
+    .op2-table td{padding:4px 3px;font-size:14px;height:44px}
+    .op2-table th{font-size:11px;padding:7px 3px}
+    .op2-table .c-time{font-size:12px;white-space:normal}
+    .op2-table .c-prod{font-size:11px;word-break:break-all}
+    .op2-table .c-exp{width:28px}
+    .op2-table .c-act{width:40px}
+    .op2-edit{width:32px}
+    .op2-sum th,.op2-sum td{padding:5px 3px}
+    .op2-sum td{font-size:14px}
+    .op2-sum thead th{font-size:10px;white-space:normal}
+    .op2-sum tbody th{font-size:12px;white-space:normal}
+    .op2-table th{white-space:normal}
+    .op2-total td{font-size:15px}
+  }
 `;
 
 function renderOpPortal(main){
@@ -2924,59 +3050,193 @@ function renderOpPortal(main){
   })();
 }
 
+const OP_REJ_OK = 2, OP_REJ_WARN = 5;   /* taux de rejet : <=2% vert, <=5% orange, au-dela rouge */
+function opPct(a, b){ return b > 0 ? (Math.round(a / b * 1000) / 10) + ' %' : '\u2014'; }
+function opAgg(lists){
+  let dem = 0, real = 0, demE = 0, rej = 0, n = 0;
+  lists.forEach(hd => (hd || []).forEach(r => {
+    const d = Number(r.demand) || 0;
+    dem += d; rej += Number(r.reject) || 0;
+    if(r.real !== null && r.real !== undefined){ real += Number(r.real) || 0; demE += d; n++; }
+  }));
+  return { dem, real, av: real - demE, rej, n };
+}
+function opWeekRange(iso){
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const dow = (dt.getUTCDay() + 6) % 7;
+  const mon = new Date(Date.UTC(y, m - 1, d - dow));
+  const sun = new Date(Date.UTC(y, m - 1, d - dow + 6));
+  return [mon.toISOString().slice(0, 10), sun.toISOString().slice(0, 10)];
+}
+async function opLoadWeek(rec){
+  const [mon, sun] = opWeekRange(rec.sheet_date);
+  try{
+    const { data, error } = await sb.from('op_tables').select('id, sheet_date, shift, hours_data')
+      .eq('table_no', rec.table_no).gte('sheet_date', mon).lte('sheet_date', sun);
+    if(error) throw error;
+    if(state.opRec !== rec) return;
+    state.opWeek = data || [];
+  }catch(e){
+    console.error('op week error:', e);
+    if(state.opRec !== rec) return;
+    state.opWeek = [];
+  }
+  opRefreshCells();
+}
+async function opNavigate(date, shift){
+  const r = state.opRec;
+  if(!r || !date || !shift) return;
+  if(!opIsReadOnly(r)) await opPersist(false);
+  const ok = await opOpenTable(r.table_no, { date, shift, from: state.opFrom });
+  if(!ok) render();
+}
+
+function opFillSum(row, a, has){
+  const set = (col, txt, cls) => {
+    const el = document.getElementById(`op-s-${row}-${col}`);
+    if(!el) return;
+    el.textContent = txt;
+    el.className = cls || '';
+  };
+  if(!a){ ['d', 'r', 'p', 'a', 'j', 't'].forEach(c => set(c, '\u2026', '')); return; }
+  set('d', a.dem, '');
+  set('r', a.real, '');
+  set('p', opPct(a.real, a.dem), '');
+  set('a', a.n ? (a.av > 0 ? '+' + a.av : String(a.av)) : '\u2014', a.n ? (a.av < 0 ? 'bad' : 'good') : '');
+  set('j', a.rej, '');
+  const rate = a.real > 0 ? a.rej / a.real * 100 : null;
+  set('t', rate === null ? '\u2014' : (Math.round(rate * 100) / 100).toFixed(2) + '%', rate === null ? '' : (rate <= OP_REJ_OK ? 'good' : rate <= OP_REJ_WARN ? 'warn' : 'bad'));
+}
+
 function opRefreshCells(){
   const rec = state.opRec;
   if(!rec) return;
   const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v === null || v === undefined) ? '' : String(v); };
+  const h1 = OP_H1[rec.shift] || 5;
+  const cur = opIsCurrent(rec);
+  const nowIdx = cur ? (opNowTunis().hour - h1 + 24) % 24 : -1;
   const tot = opTotals(rec);
   rec.hours_data.forEach((r, i) => {
     set('op-p' + i, rec.ref || '');
     set('op-d' + i, r.demand);
-    set('op-a' + i, r.real === null || r.real === undefined ? '' : r.real);
+    const empty = (r.real === null || r.real === undefined);
+    const missing = empty && cur && i < nowIdx;
+    const ra = document.getElementById('op-a' + i);
+    if(ra){
+      ra.textContent = empty ? (missing ? '\u00e0 saisir' : '') : String(r.real);
+      ra.classList.toggle('c-short', !empty && (Number(r.real) || 0) < (Number(r.demand) || 0));
+      ra.classList.toggle('c-miss', missing);
+    }
     set('op-j' + i, r.reject ? r.reject : '');
     set('op-c' + i, r.comment || '');
+    const rj = (r.rejects || []).map(x => `<span class="op2-tchip">${escHtml(x.type)} <b>${Number(x.qty) || 0}</b></span>`).join('');
+    const det = document.getElementById('op-x' + i);
+    if(det) det.innerHTML = `<div><b>Rejets :</b> ${rj || '\u2014'}</div><div style="margin-top:6px"><b>Commentaire :</b> ${r.comment ? escHtml(r.comment) : '\u2014'}</div>`;
+    const tr = document.querySelector(`.op2-row[data-i="${i}"]`);
+    if(tr) tr.classList.toggle('op2-now', i === nowIdx);
+    const tag = document.getElementById('op-tag' + i);
+    if(tag) tag.textContent = i === nowIdx ? 'heure en cours' : '';
   });
-  set('op-h-real', tot.real); set('op-h-rej', tot.rej);
   set('op-t-dem', tot.demand); set('op-t-real', tot.real); set('op-t-rej', tot.rej);
+  let demEntered = 0;
+  rec.hours_data.forEach(r => { if(r.real !== null && r.real !== undefined) demEntered += Number(r.demand) || 0; });
+  const tr = document.getElementById('op-t-real');
+  if(tr) tr.classList.toggle('c-short', tot.real < demEntered);
   const byType = opTypeTotals(rec);
   OP_TYPES.forEach((tp, k) => set('op-chip-' + k, byType[tp]));
+  const tt = document.getElementById('op-title-ref');
+  if(tt) tt.textContent = rec.ref ? ' \u2014 ' + rec.ref : '';
+  /* Line total */
+  opFillSum('eq', opAgg([rec.hours_data]));
+  const wk = state.opWeek;
+  if(wk){
+    const others = wk.filter(x => !(x.sheet_date === rec.sheet_date && x.shift === rec.shift));
+    opFillSum('day', opAgg([rec.hours_data].concat(others.filter(x => x.sheet_date === rec.sheet_date).map(x => x.hours_data))));
+    opFillSum('wk', opAgg([rec.hours_data].concat(others.map(x => x.hours_data))));
+  }else{
+    opFillSum('day', null); opFillSum('wk', null);
+  }
 }
+
+const OP_TEAMS = [
+  { key: 'morning',   label: 'F1. \u00c9quipe Matin (5h \u2192 13h)' },
+  { key: 'afternoon', label: 'F2. \u00c9quipe Apr\u00e8s-midi (13h \u2192 21h)' },
+  { key: 'night',     label: 'F3. \u00c9quipe Nuit (21h \u2192 5h)' }
+];
 
 function renderOpTable(main){
   const rec = state.opRec;
   if(!rec){ state.view = 'op-portal'; return render(); }
   const h1 = OP_H1[rec.shift] || 5;
   const ro = opIsReadOnly(rec);
+  const cur = opIsCurrent(rec);
   const fromHist = state.opFrom === 'history';
-  main.innerHTML = `<style>${OP_CSS}</style>
-    <div class="back-link" id="op-back" style="margin-bottom:12px;">${ICONS.back} ${fromHist ? opT('history') : opT('portal')}${ro ? `<span class="op-ro">${opT('readonly')}</span>` : ''}</div>
-    <div class="op-nav">${Array.from({ length: 8 }, (_, i) => `<button type="button" class="op-nb${rec.table_no === i + 1 ? ' on' : ''}" data-no="${i + 1}">${opPad(i + 1)}</button>`).join('')}</div>
-    <div class="op-head">
-      <div><div class="op-hl">Table</div><div class="op-hv op-light">Table de contr\u00f4le ${opPad(rec.table_no)}</div></div>
-      <div><div class="op-hl">Date</div><div class="op-hv op-light">${escHtml(rec.sheet_date)}</div></div>
-      <div><div class="op-hl">Equipe</div><div class="op-hv op-green">${opShiftLabel(h1)}</div></div>
-      <div><div class="op-hl">ref</div><div class="op-hv op-blue"><input id="op-ref" type="text" autocomplete="off" placeholder="ref"></div></div>
-      <div><div class="op-hl">Qtite</div><div class="op-hv op-red"><input id="op-qty" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></div></div>
-      <div><div class="op-hl">Qtite R\u00e9el</div><div class="op-hv op-yellow" id="op-h-real">0</div></div>
-      <div><div class="op-hl">Qtite Rejet</div><div class="op-hv op-gray" id="op-h-rej">0</div></div>
-    </div>
-    <div class="op-scroll"><table class="op-table">
-      <thead><tr><th>Nom / Temps</th><th>Produit Actuel</th><th>Demande</th><th>R\u00e9el</th><th>Rejet</th><th>Commentaires</th></tr></thead>
-      <tbody>${rec.hours_data.map((r, i) => `
-        <tr class="op-row" data-i="${i}">
-          <td class="c-time">${escHtml(r.time)}</td><td class="c-prod" id="op-p${i}"></td><td class="c-dem" id="op-d${i}"></td>
-          <td class="c-real" id="op-a${i}"></td><td class="c-rej" id="op-j${i}"></td><td class="c-com" id="op-c${i}"></td>
-        </tr>`).join('')}
-        <tr class="op-total"><td>Total</td><td>\u2026\u2026\u2026\u2026</td><td id="op-t-dem">0</td><td id="op-t-real">0</td><td id="op-t-rej">0</td><td></td></tr>
-      </tbody>
-    </table></div>
-    <div class="op-chips">${OP_TYPES.map((tp, k) => `<div class="op-chip">${tp}<b id="op-chip-${k}">0</b></div>`).join('')}</div>
-    <p class="op-hint">${ro ? '' : opT('hint')}</p>`;
+  const nameTxt = `Table de contr\u00f4le ${opPad(rec.table_no)}`;
+  state.opWeek = null;
+  state.opOpen = state.opOpen || {};
+  main.innerHTML = `<style>${OP_CSS}${OP2_CSS}</style>
+  <div class="op2">
+    <div class="op2-crumbs"><a id="op-home">Accueil</a><span>\u203a</span><a id="op-back">${fromHist ? opT('history') : opT('portal')}</a><span>\u203a</span><b>${nameTxt}</b></div>
+    <div class="op2-title"><span>Portail op\u00e9rateur : ${nameTxt}<span id="op-title-ref"></span></span>${ro ? `<span class="op2-ro">${opT('readonly')}</span>` : ''}</div>
+    <div class="op2-body">
+      <div class="op2-sumwrap"><table class="op2-sum">
+        <thead><tr><th>Line total</th><th>Demande</th><th>R\u00e9el</th><th>% R\u00e9el / Demande</th><th title="Avance (+) / Retard (\u2212) sur les heures saisies">AV / RE</th><th>Rejet</th><th>Taux de rejet %</th></tr></thead>
+        <tbody>
+          ${[['eq', cur ? '\u00c9quipe actuelle' : '\u00c9quipe affich\u00e9e'], ['day', 'Cumul jour'], ['wk', 'Cumul semaine']].map(([k, lab]) => `
+          <tr><th>${lab}</th>${['d', 'r', 'p', 'a', 'j', 't'].map(c => `<td id="op-s-${k}-${c}">\u2026</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table></div>
 
-  const refEl = document.getElementById('op-ref'), qtyEl = document.getElementById('op-qty');
+      <div class="op2-bar">
+        <label for="op-team">\u00c9quipe</label>
+        <select id="op-team">${OP_TEAMS.map(t => `<option value="${t.key}" ${t.key === rec.shift ? 'selected' : ''}>${t.label}</option>`).join('')}</select>
+        <div class="op2-datebar">
+          <input type="date" id="op-ddate" value="${escHtml(rec.sheet_date)}">
+          <button type="button" class="op2-btn" id="op-dtoday">Aujourd'hui</button>
+          <button type="button" class="op2-btn" id="op-dprev" aria-label="Jour pr\u00e9c\u00e9dent">&lsaquo;</button>
+          <button type="button" class="op2-btn" id="op-dnext" aria-label="Jour suivant">&rsaquo;</button>
+        </div>
+        ${(!ro && cur) ? '<button type="button" class="op2-btn primary" id="op-now-btn">\u270e Saisir l\'heure en cours</button>' : ''}
+      </div>
+      <div class="op2-pills">${Array.from({ length: 8 }, (_, i) => `<button type="button" class="op2-pill${rec.table_no === i + 1 ? ' on' : ''}" data-no="${i + 1}">T${opPad(i + 1)}</button>`).join('')}</div>
+
+      <div class="op2-params">
+        <div><label for="op-name">Table</label><input type="text" id="op-name" value="${nameTxt}" readonly tabindex="-1"></div>
+        <div><label for="op-emp">Op\u00e9rateur</label><input type="text" id="op-emp" autocomplete="off" placeholder="Nom de l'op\u00e9rateur"></div>
+        <div><label for="op-ref">R\u00e9f\u00e9rence (ref)</label><input type="text" id="op-ref" autocomplete="off" placeholder="ref"></div>
+        <div><label for="op-qty">Qtite (demande)</label><input type="number" id="op-qty" min="0" step="1" inputmode="numeric" placeholder="0"></div>
+      </div>
+
+      <div class="op2-scroll"><table class="op2-table">
+        <thead><tr><th class="c-exp"></th><th>Temps</th><th>Produit actuel</th><th>Demande</th><th>R\u00e9el</th><th>Rejet</th><th class="col-com">Commentaires / Contre-mesures</th><th class="c-act"></th></tr></thead>
+        <tbody>${rec.hours_data.map((r, i) => `
+          <tr class="op2-row" data-i="${i}">
+            <td class="c-exp"><button type="button" class="op2-arrow${state.opOpen[i] ? ' open' : ''}" data-i="${i}" aria-label="D\u00e9tails">&rsaquo;</button></td>
+            <td class="c-time">${escHtml(r.time)}<small id="op-tag${i}"></small></td>
+            <td class="c-prod" id="op-p${i}"></td><td class="c-dem" id="op-d${i}"></td>
+            <td class="c-real" id="op-a${i}"></td><td class="c-rej" id="op-j${i}"></td>
+            <td class="c-com col-com" id="op-c${i}"></td>
+            <td class="c-act">${ro ? '' : `<button type="button" class="op2-edit" data-i="${i}" aria-label="Saisir">\u270e</button>`}</td>
+          </tr>
+          <tr class="op2-det" id="op-xr${i}" style="display:${state.opOpen[i] ? 'table-row' : 'none'}"><td colspan="8"><div id="op-x${i}"></div></td></tr>`).join('')}
+        </tbody>
+        <tfoot><tr class="op2-total"><td></td><td style="text-align:left">Total</td><td>\u2014</td><td id="op-t-dem">0</td><td id="op-t-real">0</td><td id="op-t-rej">0</td><td class="col-com"></td><td></td></tr></tfoot>
+      </table></div>
+      <div class="op2-types">${OP_TYPES.map((tp, k) => `<span class="op2-tchip">${tp} <b id="op-chip-${k}">0</b></span>`).join('')}</div>
+      <p class="op-hint" style="color:#5b6575;margin:10px 0 0">${ro ? '' : opT('hint')}</p>
+    </div>
+  </div>`;
+
+  const refEl = document.getElementById('op-ref'), qtyEl = document.getElementById('op-qty'), empEl = document.getElementById('op-emp');
   refEl.value = rec.ref || '';
   qtyEl.value = rec.qty_total ? String(rec.qty_total) : '';
-  if(ro){ refEl.disabled = true; qtyEl.disabled = true; }
+  let needSave = false;
+  if(!rec.employee_name && !ro){ rec.employee_name = state.currentUser ? state.currentUser.name : ''; needSave = !!rec.employee_name; }
+  empEl.value = rec.employee_name || '';
+  if(ro){ refEl.disabled = true; qtyEl.disabled = true; empEl.disabled = true; }
+  empEl.oninput = () => { if(!ro) rec.employee_name = empEl.value.trim(); };
+  empEl.onchange = () => { if(!ro) opPersist(false); };
   refEl.oninput = () => { if(ro) return; rec.ref = refEl.value.trim(); opRefreshCells(); };
   refEl.onchange = () => { if(!ro) opPersist(false); };
   qtyEl.oninput = () => {
@@ -2987,8 +3247,31 @@ function renderOpTable(main){
     opRefreshCells();
   };
   qtyEl.onchange = () => { if(!ro) opPersist(false); };
-  main.querySelectorAll('.op-row').forEach(tr => { tr.onclick = () => opOpenPopup(+tr.dataset.i, ro); });
-  main.querySelectorAll('.op-nb').forEach(b => { b.onclick = () => opSwitchTable(+b.dataset.no); });
+  if(needSave) opPersist(false);
+
+  /* lignes : arrow = d\u00e9tails, crayon / ligne = saisie */
+  main.querySelectorAll('.op2-row').forEach(tr => { tr.onclick = () => opOpenPopup(+tr.dataset.i, ro); });
+  main.querySelectorAll('.op2-arrow').forEach(b => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const i = +b.dataset.i;
+      state.opOpen[i] = !state.opOpen[i];
+      b.classList.toggle('open', !!state.opOpen[i]);
+      document.getElementById('op-xr' + i).style.display = state.opOpen[i] ? 'table-row' : 'none';
+    };
+  });
+  main.querySelectorAll('.op2-edit').forEach(b => { b.onclick = (e) => { e.stopPropagation(); opOpenPopup(+b.dataset.i, ro); }; });
+  const nowBtn = document.getElementById('op-now-btn');
+  if(nowBtn) nowBtn.onclick = () => opOpenPopup(Math.min(7, Math.max(0, (opNowTunis().hour - h1 + 24) % 24)), ro);
+
+  /* navigation : \u00e9quipe / date / table */
+  document.getElementById('op-team').onchange = (e) => opNavigate(rec.sheet_date, e.target.value);
+  document.getElementById('op-ddate').onchange = (e) => opNavigate(e.target.value, rec.shift);
+  document.getElementById('op-dprev').onclick = () => opNavigate(opShiftDate(rec.sheet_date, -1), rec.shift);
+  document.getElementById('op-dnext').onclick = () => opNavigate(opShiftDate(rec.sheet_date, 1), rec.shift);
+  document.getElementById('op-dtoday').onclick = () => { const sh = opCurrentShift(); opNavigate(sh.date, sh.key); };
+  main.querySelectorAll('.op2-pill').forEach(b => { b.onclick = () => opSwitchTable(+b.dataset.no); });
+  document.getElementById('op-home').onclick = async () => { if(!ro) await opPersist(false); state.opRec = null; state.view = 'menu'; render(); };
   document.getElementById('op-back').onclick = async () => {
     if(!ro) await opPersist(false);
     state.opRec = null;
@@ -2996,6 +3279,7 @@ function renderOpTable(main){
     render();
   };
   opRefreshCells();
+  opLoadWeek(rec);
 }
 
 /* Tableau de remplissage (fen\u00eatre surgissante) */
@@ -3006,16 +3290,29 @@ function opOpenPopup(i, ro){
   ov.innerHTML = `<div class="op-modal">
     <div class="op-m-title">Tableau de remplissage</div>
     <div class="op-m-row"><label>Temps :</label><div class="op-m-time" id="op-m-time"></div></div>
+    <div class="op-m-row"><label>Demande :</label><input id="op-m-dem" type="number" readonly tabindex="-1"></div>
     <div class="op-m-row"><label>R\u00e9el :</label><input id="op-m-real" type="number" min="0" step="1" inputmode="numeric"></div>
     <div class="op-m-blk"><label>Type de rejet :</label><div id="op-m-lines"></div><button type="button" class="op-add" id="op-m-add">${opT('add')}</button></div>
-    <div class="op-m-blk"><label>Commentaires :</label><textarea id="op-m-com" rows="3"></textarea></div>
+    <div class="op-m-blk"><label>Commentaires :<span class="op-req" id="op-m-comreq" style="display:none">${opT('req')}</span></label><textarea id="op-m-com" rows="3"></textarea></div>
     <div class="op-m-actions"><button type="button" class="btn" id="op-m-save">Enregistrer</button><button type="button" class="btn op-cancel" id="op-m-cancel">Annuler</button></div>
   </div>`;
   document.body.appendChild(ov);
   const $ = (id) => ov.querySelector('#' + id);
   $('op-m-time').textContent = row.time;
+  const demand = Number(row.demand) || 0;
+  $('op-m-dem').value = String(demand);
   $('op-m-real').value = (row.real === null || row.real === undefined) ? '' : String(row.real);
   $('op-m-com').value = row.comment || '';
+  /* r\u00e9el < demande  =>  commentaire obligatoire */
+  const needComment = () => { const v = $('op-m-real').value; return v !== '' && (Number(v) || 0) < demand; };
+  const refreshNeed = () => {
+    const need = needComment();
+    $('op-m-comreq').style.display = need ? 'inline' : 'none';
+    $('op-m-com').classList.toggle('op-need', need && !$('op-m-com').value.trim());
+  };
+  $('op-m-real').oninput = refreshNeed;
+  $('op-m-com').oninput = refreshNeed;
+  refreshNeed();
   const lines = [], box = $('op-m-lines');
   function addLine(type, qty){
     const wrap = document.createElement('div'); wrap.className = 'op-rj';
@@ -3038,6 +3335,12 @@ function opOpenPopup(i, ro){
   ov.addEventListener('mousedown', (e) => { if(e.target === ov) close(); });
   $('op-m-save').onclick = async () => {
     const realRaw = $('op-m-real').value;
+    if(needComment() && !$('op-m-com').value.trim()){
+      showToast(opT('needComment'), true);
+      refreshNeed();
+      $('op-m-com').focus();
+      return;
+    }
     row.real = realRaw === '' ? null : Math.max(0, Math.floor(Number(realRaw) || 0));
     const rejects = [];
     lines.forEach(l => { const qn = Math.max(0, Math.floor(Number(l.q.value) || 0)); if(qn > 0) rejects.push({ type: l.sel.value, qty: qn }); });
@@ -3089,7 +3392,7 @@ function renderOpHistory(main){
   (async () => {
     const body = document.getElementById('op-hist-body');
     try{
-      const { data, error } = await sb.from('op_tables').select('table_no, shift, ref, qty_total, hours_data, updated_at').eq('sheet_date', date);
+      const { data, error } = await sb.from('op_tables').select('*').eq('sheet_date', date);
       if(error) throw error;
       const rows = data || [];
       if(!document.getElementById('op-hist-body')) return;
@@ -3105,7 +3408,7 @@ function renderOpHistory(main){
           (r.hours_data || []).forEach(x => { rr += Number(x.real) || 0; jj += Number(x.reject) || 0; });
           const tm = r.updated_at ? new Date(r.updated_at).toLocaleTimeString('fr-FR', { timeZone: 'Africa/Tunis', hour: '2-digit', minute: '2-digit' }) : '';
           return `<div class="op-tile" data-no="${i + 1}" data-shift="${sk}"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div>
-            <div class="op-tile-stat">${escHtml(r.ref || '')}<br>R\u00e9el ${rr} / Qtite ${Number(r.qty_total) || 0} &middot; Rejet ${jj}<br>${opT('last')} ${tm}</div></div>`;
+            <div class="op-tile-stat">${escHtml(r.ref || '')}${r.employee_name ? ' &middot; ' + escHtml(r.employee_name) : ''}<br>R\u00e9el ${rr} / Qtite ${Number(r.qty_total) || 0} &middot; Rejet ${jj}<br>${opT('last')} ${tm}</div></div>`;
         }).join('');
         return `<div class="op-sec"><h3>${opShiftName(sk)} &mdash; ${opShiftLabel(h1)}</h3>
           <p class="op-sec-tot">${opT('teamTot')} : R\u00e9el ${real} / Qtite ${qty} &middot; Rejet ${rej}</p>
@@ -3158,9 +3461,6 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
-
-
-
 
 
 
