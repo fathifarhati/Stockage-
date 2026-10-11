@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestion de Stock</title>
+<title>Gestion de Stock — Premium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Cairo:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -14,16 +13,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --bg: #12161d; --panel: #1b212b; --panel-alt: #232a36; --border: #313a49;
-    --text: #e7eaee; --text-muted: #8a93a3; --accent: #d68c45; --blue: #5b8fb0;
-    --danger: #e2574c; --ok: #5aad8c; --radius: 3px;
+    --bg: #f2f4f8; --panel: #ffffff; --panel-alt: #f1f3f7; --border: #d5dbe5;
+    --text: #1d2433; --text-muted: #5b6575; --accent: #d68c45; --blue: #1d5fb8;
+    --danger: #d32f3f; --ok: #1f9d4a; --radius: 3px;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
     background:
-      repeating-linear-gradient(0deg, #ffffff05 0px, #ffffff05 1px, transparent 1px, transparent 40px),
-      repeating-linear-gradient(90deg, #ffffff05 0px, #ffffff05 1px, transparent 1px, transparent 40px),
+      repeating-linear-gradient(0deg, #0000000a 0px, #0000000a 1px, transparent 1px, transparent 40px),
+      repeating-linear-gradient(90deg, #0000000a 0px, #0000000a 1px, transparent 1px, transparent 40px),
       var(--bg);
     color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased;
   }
@@ -55,7 +54,7 @@
   .btn:hover{ filter:brightness(1.08); }
   .btn:disabled{ opacity:.6; cursor:default; }
   .btn.secondary{ background:transparent; border:1px solid var(--border); color:var(--text); width:auto; }
-  .btn.blue{ background:var(--blue); color:#0e1a22; }
+  .btn.blue{ background:var(--blue); color:#fff; }
   .login-hint{ margin-top:18px; font-size:11px; color:var(--text-muted); line-height:1.6; border-top:1px dashed var(--border); padding-top:14px; }
   .error{ color:var(--danger); font-size:13px; margin:-8px 0 14px; }
   .menu-head{ margin-bottom:26px; }
@@ -82,7 +81,7 @@
   @media (max-width:600px){ .form-grid{ grid-template-columns:1fr; } }
   .form-actions{ display:flex; gap:10px; margin-top:6px; }
   .form-actions .btn{ width:auto; }
-  .toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ok); color:#0e1a15; padding:10px 18px; border-radius:var(--radius); font-size:13px; font-weight:600; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90vw; text-align:center; }
+  .toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ok); color:#fff; padding:10px 18px; border-radius:var(--radius); font-size:13px; font-weight:600; opacity:0; transition:opacity .2s; pointer-events:none; max-width:90vw; text-align:center; }
   .toast.show{ opacity:1; }
   .toolbar{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
   .table-wrap{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); overflow-x:auto; }
@@ -128,6 +127,207 @@
   .tile .tile-del{ position:absolute; top:4px; inset-inline-end:4px; background:transparent; border:none; color:var(--text-muted); width:22px; height:22px; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .tile .tile-del:hover{ color:var(--danger); }
   .tile .tile-del svg{ width:12px; height:12px; }
+
+/* ============================================================
+   PREMIUM EXPERIENCE LAYER — visual refinement only
+   Keeps the existing application logic, database calls and forms intact.
+   ============================================================ */
+:root{
+  --bg:#f4f7fb;
+  --panel:#ffffff;
+  --panel-alt:#f6f8fc;
+  --border:#e1e7f0;
+  --text:#172337;
+  --text-muted:#66758a;
+  --accent:#0f9f8f;
+  --blue:#315fd5;
+  --danger:#d9475c;
+  --ok:#15966a;
+  --radius:14px;
+  --premium-shadow:0 10px 28px rgba(25,43,74,.055);
+}
+html{scroll-behavior:smooth;}
+body{
+  background:
+    radial-gradient(ellipse at 7% 0%, rgba(49,95,213,.075), transparent 32%),
+    radial-gradient(ellipse at 100% 10%, rgba(15,159,143,.075), transparent 28%),
+    var(--bg);
+  color:var(--text);
+  line-height:1.5;
+}
+button,input,select,textarea{transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease,transform .18s ease;}
+.topbar{
+  position:sticky;top:0;z-index:100;
+  padding:13px clamp(14px,3vw,34px);
+  background:rgba(255,255,255,.88);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(218,226,238,.9);
+  box-shadow:0 4px 20px rgba(28,45,75,.035);
+}
+.brand{font-size:18px;letter-spacing:-.35px;gap:12px;}
+.brand .dot{width:12px;height:12px;border-radius:4px;transform:rotate(45deg);box-shadow:0 0 0 5px rgba(15,159,143,.11);}
+.who{gap:12px;flex-wrap:wrap;}
+main{max-width:1440px;padding:clamp(18px,3vw,34px) clamp(14px,3vw,34px) 64px;}
+.login-card,.form-panel,.table-wrap,.stat-card,.chart-panel,.menu-card,.tile,.config-error .box{
+  border-radius:var(--radius);
+  box-shadow:var(--premium-shadow);
+}
+.login-card{padding:clamp(25px,4vw,38px);border-color:rgba(218,226,238,.95);}
+.login-card .dot{border-radius:4px;box-shadow:0 0 0 6px rgba(15,159,143,.10);}
+.login-card h1{letter-spacing:-.6px;font-size:24px;}
+.menu-head{margin-bottom:28px;}
+.menu-head h1{font-size:clamp(23px,3vw,30px);letter-spacing:-.8px;}
+.menu-head p{font-size:14px;max-width:760px;line-height:1.75;}
+.menu-grid{gap:16px;}
+.menu-card{
+  position:relative;overflow:hidden;min-height:142px;padding:24px;
+  border:1px solid rgba(220,228,239,.95);border-inline-start:4px solid var(--accent);
+  background:linear-gradient(145deg,#fff 0%,#fbfcff 100%);
+  transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;
+}
+.menu-card:after{content:"";position:absolute;width:120px;height:120px;inset-inline-end:-48px;bottom:-64px;border-radius:50%;background:rgba(15,159,143,.055);pointer-events:none;}
+.menu-card:hover{transform:translateY(-3px);background:#fff;box-shadow:0 16px 34px rgba(25,43,74,.10);border-color:#cbd8e8;}
+.menu-card svg{width:29px;height:29px;margin-bottom:15px;color:var(--accent);}
+.menu-card h3{font-size:16px;letter-spacing:-.2px;}
+.menu-card p{font-size:13px;line-height:1.65;}
+.page-head{margin-bottom:24px;}
+.page-head h2{font-size:clamp(19px,2.4vw,24px);letter-spacing:-.45px;}
+.back-link{padding:8px 11px;border-radius:10px;transition:background .15s ease;}
+.back-link:hover{background:rgba(49,95,213,.07);color:var(--blue);}
+.form-panel{padding:clamp(16px,2.5vw,28px);border-color:rgba(220,228,239,.95);}
+label{font-size:12px;font-weight:600;letter-spacing:.1px;color:#52637a;}
+input,select,textarea{
+  background:#f8fafd;border-color:#dce4ef;border-radius:10px;
+  padding:11px 13px;color:var(--text);font-size:14px;
+}
+input:hover,select:hover,textarea:hover{border-color:#b9c9dd;}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(49,95,213,.12);background:#fff;}
+.btn{min-height:42px;border-radius:10px;padding:11px 18px;font-weight:700;letter-spacing:.05px;box-shadow:0 3px 8px rgba(15,159,143,.12);}
+.btn:hover{filter:none;transform:translateY(-1px);box-shadow:0 7px 16px rgba(15,159,143,.18);}
+.btn:active{transform:translateY(0);}
+.btn.secondary{box-shadow:none;background:#fff;border-color:#dce4ef;}
+.btn.secondary:hover{background:#f3f7fc;border-color:#b9c9dd;}
+.btn.blue{background:linear-gradient(135deg,#315fd5,#244db9);box-shadow:0 4px 10px rgba(49,95,213,.16);}
+.btn.blue:hover{box-shadow:0 8px 18px rgba(49,95,213,.22);}
+.who button,.lang-btn,.icon-btn{border-radius:9px;background:#fff;}
+.who button:hover,.lang-btn:hover{background:#f6f8fc;}
+.toolbar{align-items:center;gap:9px;}
+.table-wrap{border-color:#dfe6f0;}
+table{font-size:13px;}
+th{background:#f3f6fb;color:#52637a;font-weight:700;font-size:10.5px;letter-spacing:.55px;padding:12px;}
+td{padding:11px 12px;border-bottom-color:#edf1f6;}
+tbody tr{transition:background .14s ease;}
+tbody tr:hover{background:#f8faff;}
+tr.filter-row th{background:#fff;}
+tr.filter-row input{border-radius:7px;}
+td input,td select{border-radius:7px;}
+.icon-btn{width:32px;height:32px;}
+.icon-btn:hover{background:rgba(15,159,143,.07);}
+.stat-grid{gap:14px;}
+.stat-card{padding:20px;border-color:#e0e7f1;position:relative;overflow:hidden;}
+.stat-card:after{content:"";position:absolute;inset-inline-end:-25px;top:-35px;width:95px;height:95px;border-radius:50%;background:rgba(49,95,213,.045);pointer-events:none;}
+.stat-card .label{font-size:10.5px;font-weight:700;letter-spacing:.7px;}
+.stat-card .value{font-size:clamp(24px,3vw,32px);letter-spacing:-.8px;}
+.chart-panel{padding:22px;border-color:#e0e7f1;}
+.chart-panel h3{font-size:12px;font-weight:700;}
+.banner{border-radius:11px;background:linear-gradient(135deg,#f0f6ff,#f1fbf8);border-color:#dce8f3;}
+.tile-grid{gap:12px;}
+.tile{padding:18px 12px;border-color:#dfe6f0;background:linear-gradient(145deg,#fff,#fbfcff);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+.tile:hover{transform:translateY(-2px);background:#fff;box-shadow:0 10px 22px rgba(25,43,74,.08);border-color:#b7c9e2;}
+.tile .tile-icon{font-size:25px;}
+.toast{z-index:9999;bottom:22px;border-radius:12px;box-shadow:0 12px 30px rgba(16,33,57,.2);padding:12px 20px;}
+.error{font-weight:600;}
+.config-error code{border-radius:10px;}
+:focus-visible{outline:3px solid rgba(49,95,213,.28);outline-offset:2px;}
+@media(max-width:720px){
+  .topbar{padding:12px 14px;align-items:flex-start;gap:10px;}
+  .brand{font-size:15px;}
+  .who{justify-content:flex-end;gap:6px;font-size:12px;}
+  main{padding-top:20px;}
+  .form-panel{padding:16px;}
+  .stat-grid{gap:10px;}
+  .stat-card{padding:15px;}
+  .form-actions{flex-wrap:wrap;}
+  .form-actions .btn{flex:1 1 auto;}
+}
+@media(max-width:420px){
+  .topbar{flex-direction:column;}
+  .who{width:100%;justify-content:space-between;}
+  .menu-card{padding:20px;}
+  .stat-card .value{font-size:23px;}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important;}
+}
+
+
+/* ===== INDUSTRIAL ANALYTICS DASHBOARD (separate page; existing screens untouched) ===== */
+.analytics-entry{border-inline-start-color:#3b82f6!important;background:linear-gradient(135deg,#111827,#172554)!important;color:#f8fafc!important}
+.analytics-entry p{color:#aab7cf!important}
+.analytics-entry svg{color:#60a5fa}
+.analytics-shell{background:#080d18;color:#e8eef9;border:1px solid #263247;border-radius:18px;padding:22px;max-width:1500px;margin:0 auto;box-shadow:0 18px 55px #0b122022}
+.analytics-shell *{box-sizing:border-box}
+.analytics-shell .an-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.analytics-shell .an-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#6ea8ff;font-weight:700}
+.analytics-shell h2{color:#f8fafc;font-size:24px;margin:5px 0 4px}
+.analytics-shell .an-sub{color:#9aa9c1;font-size:13px;margin:0}
+.analytics-shell .an-back{background:#121b2c;border:1px solid #2a3850;color:#dbe7fa;border-radius:10px;padding:9px 13px;cursor:pointer;font:inherit}
+.analytics-shell .an-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.analytics-shell .an-card,.analytics-shell .an-panel{background:linear-gradient(145deg,#101827,#0c1320);border:1px solid #202c40;border-radius:15px;padding:16px;min-width:0}
+.analytics-shell .an-label{font-size:12px;color:#9aa9c1;margin-bottom:13px;display:flex;gap:8px;align-items:center}
+.analytics-shell .an-value{font-size:clamp(22px,3vw,31px);font-weight:700;letter-spacing:-.8px;color:#f4f7ff;overflow-wrap:anywhere}
+.analytics-shell .an-note{font-size:11px;color:#8293ad;margin-top:9px}
+.analytics-shell .an-blue{color:#60a5fa}.analytics-shell .an-cyan{color:#4dd9e8}.analytics-shell .an-purple{color:#a78bfa}.analytics-shell .an-green{color:#34d399}
+.analytics-shell .an-layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,.9fr);gap:14px;margin-bottom:14px}
+.analytics-shell .an-panel h3{font-size:14px;color:#f1f5fc;margin:0 0 5px;font-weight:600}
+.analytics-shell .an-panel .an-desc{font-size:11px;color:#8293ad;margin:0 0 15px}
+.analytics-shell .an-bars{display:flex;flex-direction:column;gap:14px}
+.analytics-shell .an-bar-head{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#dce5f5;margin-bottom:7px}
+.analytics-shell .an-track{height:7px;border-radius:20px;background:#202b3e;overflow:hidden}
+.analytics-shell .an-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#3b82f6,#22d3ee)}
+.analytics-shell .an-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.analytics-shell .an-mini{border:1px solid #202c40;background:#0e1726;border-radius:12px;padding:14px}
+.analytics-shell .an-mini strong{font-size:22px;color:#f8fafc;display:block;margin:9px 0 5px}
+.analytics-shell .an-mini span{font-size:11px;color:#8ea0bb}
+.analytics-shell .an-foot{color:#71829d;font-size:10px;margin-top:15px}
+@media(max-width:900px){.analytics-shell .an-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-shell .an-layout{grid-template-columns:1fr}.analytics-shell .an-bottom{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.analytics-shell{padding:13px;border-radius:12px}.analytics-shell .an-grid{gap:8px}.analytics-shell .an-card,.analytics-shell .an-panel{padding:12px}.analytics-shell .an-bottom{grid-template-columns:1fr}.analytics-shell h2{font-size:20px}}
+
+
+/* ===== APP WORKSPACE LAYOUT: sidebar + central workspace ===== */
+body:has(.workspace-shell){background:#070c16;color:#e7edf8;}
+.workspace-shell{min-height:100vh;display:grid;grid-template-columns:238px minmax(0,1fr);background:#080d18;color:#e8eef9;}
+.workspace-sidebar{background:#101722;border-right:1px solid #202b3c;display:flex;flex-direction:column;min-height:100vh;padding:18px 12px 14px;}
+.workspace-brand{display:flex;align-items:center;gap:10px;padding:3px 8px 22px;border-bottom:1px solid #202b3c;margin-bottom:17px;color:#f8fafc;font-weight:700;font-size:17px;}
+.workspace-brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#d8edff;color:#2474c8;font-size:18px;}
+.workspace-brand small{display:block;color:#8e9cb1;font-size:11px;font-weight:400;margin-top:2px;}
+.workspace-nav{display:flex;flex-direction:column;gap:5px;}
+.workspace-nav button,.workspace-logout{width:100%;border:0;background:transparent;color:#9ba9bd;display:flex;align-items:center;gap:11px;text-align:start;padding:11px 12px;border-radius:11px;cursor:pointer;font:500 13px 'IBM Plex Sans',sans-serif;}
+.workspace-nav button:hover,.workspace-logout:hover{background:#192438;color:#f8fafc;}
+.workspace-nav button.active{background:#1c3b6c;color:#fff;box-shadow:inset 3px 0 #438bff;}
+.workspace-nav .nav-symbol{width:18px;text-align:center;font-size:16px;flex-shrink:0;}
+.workspace-logout-wrap{margin-top:auto;padding-top:16px;border-top:1px solid #202b3c;}
+.workspace-logout{color:#9ba9bd;}
+.workspace-logout .nav-symbol{color:#8fa3bd;}
+.workspace-main{min-width:0;display:flex;flex-direction:column;min-height:100vh;background:#080d18;}
+.workspace-topbar{height:72px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 26px;border-bottom:1px solid #202b3c;background:#090e18;}
+.workspace-search{max-width:390px;width:100%;display:flex;align-items:center;gap:9px;border:1px solid #202b3c;background:#111824;border-radius:22px;padding:9px 13px;color:#8190a6;font-size:13px;}
+.workspace-user{display:flex;align-items:center;gap:10px;color:#e7edf8;font-size:13px;}
+.workspace-avatar{width:37px;height:37px;border-radius:50%;display:grid;place-items:center;background:#d8edff;color:#245a9b;font-weight:700;border:2px solid #2b3a51;}
+.workspace-user-name{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.workspace-content{width:100%;max-width:none;margin:0;padding:25px 26px 36px;flex:1;min-width:0;}
+.workspace-content .analytics-shell{max-width:none;}
+.workspace-content .page-head,.workspace-content .menu-head{color:#f0f5ff;}
+.workspace-content .menu-head p{color:#9ba9bd;}
+.workspace-content .menu-card,.workspace-content .stat-card,.workspace-content .chart-panel,.workspace-content .form-panel,.workspace-content .table-wrap{background:#101722;color:#e8eef9;border-color:#263247;}
+.workspace-content .menu-card p,.workspace-content .label,.workspace-content label,.workspace-content .back-link{color:#9ba9bd;}
+.workspace-content input,.workspace-content select{background:#0c1320;color:#e8eef9;border-color:#2a3850;}
+.workspace-content th{background:#141e2d;color:#aab8cd;border-color:#263247;}
+.workspace-content td{border-color:#263247;}
+.workspace-content .menu-card:hover{background:#172235;}
+@media(max-width:850px){.workspace-shell{grid-template-columns:190px minmax(0,1fr)}.workspace-content{padding:18px 15px}.workspace-topbar{padding:10px 15px}}
+@media(max-width:620px){.workspace-shell{grid-template-columns:1fr}.workspace-sidebar{min-height:auto;padding:10px;border-right:0;border-bottom:1px solid #202b3c}.workspace-brand{padding:4px 6px 12px;margin-bottom:10px}.workspace-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.workspace-nav button{padding:9px 8px;font-size:12px}.workspace-logout-wrap{margin-top:10px;padding-top:8px}.workspace-topbar{height:auto;min-height:62px}.workspace-search{max-width:180px}.workspace-user-name{max-width:100px}.workspace-content{padding:15px 10px}.workspace-content .analytics-shell{padding:14px}.analytics-shell .an-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-shell .an-layout{grid-template-columns:1fr}}
+
 </style>
 
 </head>
@@ -140,7 +340,7 @@
    CONFIGURATION SUPABASE
    ============================================================ */
 const SUPABASE_URL = 'https://ykbfeywmuemuwdiqcjow.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_r4X6obt0sqS9IoPkqD0nFg_mvSgotPp';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrYmZleXdtdWVtdXdkaXFjam93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyOTcwNjQsImV4cCI6MjEwNjg3MzA2NH0.MtuHMsJepuEcSRZrW5lOtSLAw8smosTfScw6HG9zeaw';
 
 /* ================= I18N ================= */
 const I18N = {
@@ -330,6 +530,7 @@ const I18N = {
   roleUser:{fr:'Opérateur', ar:'مشغل'},
   roleEmployee:{fr:'Employé(e)', ar:'موظف'},
   roleVisitor:{fr:'Visiteur', ar:'زائر'},
+  roleEntrepreneur:{fr:'Entrepreneur', ar:'مقاول'},
   cardOpTitle:{fr:'Portail opérateur', ar:'بوابة المشغّل'},
   cardOpDesc:{fr:'8 tables de contrôle : saisie horaire, rejets et commentaires', ar:'8 طاولات مراقبة: إدخال كل ساعة والمرفوضات والتعليقات'},
   roleUpdatedToast:{fr:'Rôle mis à jour', ar:'تم تحديث الصلاحية'},
@@ -616,36 +817,85 @@ function renderConfigError(){
   app.innerHTML = `<div class="config-error"><div class="box"><h2>${t('configErrorTitle')}</h2><p>${t('configErrorBody')}</p></div></div>`;
 }
 
+/* ===== Entrepreneur : voit toute l'application en lecture seule (aucun ajout, modification ni suppression) ===== */
+let entObserver = null;
+function entCleanup(){
+  const m = document.getElementById('main');
+  if(!m) return;
+  m.querySelectorAll('#card-entry, #card-qc-entry, #card-debit-new, #card-ccs-new, .row-actions button, .tile-del').forEach(el => el.remove());
+  if(['catalog', 'pdf-library', 'debit-pdf', 'ccs-pdf'].includes(state.view)) m.querySelectorAll('.form-panel').forEach(el => el.remove());
+  m.querySelectorAll('select[id^="cstatus-"], select[id^="dstatus-"]').forEach(el => { el.disabled = true; });
+}
+function entSetupReadOnly(main){
+  if(entObserver){ entObserver.disconnect(); entObserver = null; }
+  if(!main || !state.currentUser || state.currentUser.role !== 'entrepreneur') return;
+  entCleanup();
+  entObserver = new MutationObserver(() => {
+    entObserver.disconnect();
+    entCleanup();
+    entObserver.observe(main, { childList: true, subtree: true });
+  });
+  entObserver.observe(main, { childList: true, subtree: true });
+}
+
 function render(){
   if(!configOk) return renderConfigError();
   if(state.view === 'login') return renderLogin();
   {
     const rl = state.currentUser && state.currentUser.role;
     if(rl === 'visitor' && state.view !== 'pdf-library') state.view = 'pdf-library';
-    else if(rl === 'employee' && state.view !== 'qc-entry') state.view = 'qc-entry';
+    else if(rl === 'employee' && !['qc-entry','op-portal','op-table'].includes(state.view)) state.view = 'qc-entry';
+    else if(rl === 'entrepreneur' && !['op-portal','op-table','qc-data'].includes(state.view)) state.view = 'op-portal';
     else if(rl !== 'admin' && (state.view === 'users' || state.view === 'recipients')) state.view = 'menu';
   }
   const otherLang = state.lang==='fr' ? 'ar' : 'fr';
   const otherLabel = state.lang==='fr' ? 'العربية' : 'Français';
-  app.innerHTML = `
-    <div class="topbar">
-      <div class="brand"><span class="dot"></span>${t('appTitle')}</div>
-      <div class="who">
-        <button class="lang-btn" id="lang-btn">${otherLabel}</button>
-        <span>${escHtml(state.currentUser.name)}</span>
-        <button id="logout-btn">${t('logout')}</button>
-      </div>
-    </div>
-    <main id="main"></main>`;
+  const isAdmin = state.currentUser && state.currentUser.role === 'admin';
+  const nav = [
+    ['analytics-hub','▦','Analytics Dashboard'],['stock-menu','▤',t('moduleStockTitle')],['qc-menu','◇',t('moduleQcTitle')],
+    ['pdf-library','▧',t('cardPdfTitle')],['pdf-bq','▧',t('cardBqTitle')],['debit-menu','⇄',t('cardDebitTitle')],
+    ['ccs-menu','▣',tc('cardTitle')],['op-portal','▥',t('cardOpTitle')]
+  ];
+  if(isAdmin){nav.push(['users','♙',t('cardUsersTitle')],['recipients','✉',t('cardRecipientsTitle')]);}
+  const roleNow = state.currentUser && state.currentUser.role;
+  if(roleNow === 'entrepreneur') nav.splice(0, nav.length, ['op-portal','▥',t('cardOpTitle')],['qc-data','◇',t('cardQcDataTitle')]);
+  if(roleNow === 'employee') nav.splice(0, nav.length, ['qc-entry','◇',t('moduleQcTitle')],['op-portal','▥',t('cardOpTitle')]);
+  const activeView = state.view === 'dashboard' ? 'analytics-hub' : state.view;
+  app.innerHTML = `<div class="workspace-shell">
+    <aside class="workspace-sidebar">
+      <div class="workspace-brand"><span class="workspace-brand-mark">⌁</span><span>Gestion de Stock<small>Industrial Management</small></span></div>
+      <nav class="workspace-nav" aria-label="Navigation principale">
+        ${nav.map(([view,icon,label])=>`<button type="button" data-view="${view}" class="${activeView===view?'active':''}"><span class="nav-symbol">${icon}</span><span>${label}</span></button>`).join('')}
+      </nav>
+      <div class="workspace-logout-wrap"><button class="workspace-logout" id="logout-btn"><span class="nav-symbol">↪</span><span>${t('logout')}</span></button></div>
+    </aside>
+    <section class="workspace-main">
+      <header class="workspace-topbar"><div class="workspace-search"><span>⌕</span><span>Search...</span></div><div class="workspace-user"><button class="lang-btn" id="lang-btn">${otherLabel}</button><span class="workspace-user-name">${escHtml(state.currentUser.name)}</span><span class="workspace-avatar">${escHtml((state.currentUser.name||'U').trim().charAt(0).toUpperCase())}</span></div></header>
+      <main id="main" class="workspace-content"></main>
+    </section>
+  </div>`;
   document.getElementById('logout-btn').onclick = async () => { await sb.auth.signOut(); state.currentUser = null; state.view='login'; render(); };
   document.getElementById('lang-btn').onclick = () => setLang(otherLang);
+  app.querySelectorAll('.workspace-nav [data-view]').forEach(btn=>btn.onclick=async()=>{
+    const view=btn.dataset.view;
+    if(view==='analytics-hub'){await loadRecords();await loadQcRecords();}
+    if(view==='stock-menu'){await loadRecords();}
+    if(view==='qc-menu'){await loadCatalog();await loadQcRecords();}
+    if(view==='pdf-library'){state.currentLibrary='pdf';state.pdfFolder='';await listPdfEntries('');}
+    if(view==='pdf-bq'){state.currentLibrary='bonnequalite';state.pdfFolder='';await listPdfEntries('');state.view='pdf-library';render();return;}
+    if(view==='recipients') await loadRecipients();
+    if(view==='qc-entry') await loadCatalog();
+    if(view==='qc-data') await loadQcRecords();
+    state.view=view;render();
+  });
   const main = document.getElementById('main');
   if(state.view === 'menu') renderMenu(main);
   if(state.view === 'stock-menu') renderStockMenu(main);
   if(state.view === 'qc-menu') renderQcMenu(main);
   if(state.view === 'entry') renderEntry(main);
   if(state.view === 'data') renderData(main);
-  if(state.view === 'dashboard') renderDashboard(main);
+  if(state.view === 'dashboard') renderAnalyticsHub(main);
+  if(state.view === 'analytics-hub') renderAnalyticsHub(main);
   if(state.view === 'users') renderUsers(main);
   if(state.view === 'recipients') renderRecipients(main);
   if(state.view === 'pdf-library') renderPdfLibrary(main);
@@ -664,6 +914,7 @@ function render(){
   if(state.view === 'qc-entry') renderQcEntry(main);
   if(state.view === 'qc-data') renderQcData(main);
   if(state.view === 'qc-dashboard') renderQcDashboard(main);
+  entSetupReadOnly(main);
 }
 
 function renderLogin(){
@@ -712,13 +963,16 @@ async function enterByRole(){
   if(role === 'employee'){
     await loadCatalog();
     state.view = 'qc-entry';
+  }else if(role === 'entrepreneur'){
+    state.view = 'op-portal';
   }else if(role === 'visitor'){
     state.currentLibrary = 'pdf'; state.pdfFolder = '';
     await listPdfEntries('');
     state.view = 'pdf-library';
   }else{
-    state.view = 'menu';
+    state.view = 'analytics-hub';
     await loadRecords();
+    await loadQcRecords();
   }
 }
 
@@ -727,6 +981,7 @@ function renderMenu(main){
   main.innerHTML = `
     <div class="menu-head"><h1>${t('menuTitle')}</h1><p>${t('menuSubtitle')}</p></div>
     <div class="menu-grid">
+      <div class="menu-card analytics-entry" id="card-analytics">${ICONS.dash}<h3>Analytics Dashboard</h3><p>Vue industrielle : stock, qualité, activité et indicateurs de gestion.</p></div>
       <div class="menu-card" id="card-stock">${ICONS.data}<h3>${t('moduleStockTitle')}</h3><p>${t('moduleStockDesc')}</p></div>
       <div class="menu-card" id="card-qc">${ICONS.qc}<h3>${t('moduleQcTitle')}</h3><p>${t('moduleQcDesc')}</p></div>
       <div class="menu-card" id="card-pdf">${ICONS.pdf}<h3>${t('cardPdfTitle')}</h3><p>${t('cardPdfDesc')}</p></div>
@@ -737,6 +992,7 @@ function renderMenu(main){
       ${isAdmin ? `<div class="menu-card" id="card-users">${ICONS.users}<h3>${t('cardUsersTitle')}</h3><p>${t('cardUsersDesc')}</p></div>` : ''}
       ${isAdmin ? `<div class="menu-card" id="card-recipients">${ICONS.mail}<h3>${t('cardRecipientsTitle')}</h3><p>${t('cardRecipientsDesc')}</p></div>` : ''}
     </div>`;
+  document.getElementById('card-analytics').onclick = async () => { await loadRecords(); await loadQcRecords(); state.view='analytics-hub'; render(); };
   document.getElementById('card-stock').onclick = () => { state.view='stock-menu'; render(); };
   document.getElementById('card-qc').onclick = async () => { await loadCatalog(); await loadQcRecords(); state.view='qc-menu'; render(); };
   document.getElementById('card-pdf').onclick = async () => { state.currentLibrary='pdf'; state.pdfFolder=''; await listPdfEntries(''); state.view='pdf-library'; render(); };
@@ -936,15 +1192,57 @@ function renderRow(r){
   </tr>`;
 }
 
+/* ===== Filtre par date commun aux 3 tableaux de bord (Analytics, Stock, Contrôle qualité) ===== */
+function dashInRange(r){
+  const d = ((r && r.date) || '').toString().slice(0, 10);
+  if(state.dashFrom && d < state.dashFrom) return false;
+  if(state.dashTo && d > state.dashTo) return false;
+  return true;
+}
+function dashBarHtml(){
+  const L = state.lang === 'ar'
+    ? { from: 'من', to: 'إلى', today: 'اليوم', w: '7 أيام', m: 'هذا الشهر', all: 'الكل' }
+    : { from: 'Du', to: 'Au', today: "Aujourd'hui", w: '7 jours', m: 'Ce mois', all: 'Tout' };
+  return `<style>.dash-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 16px;padding:10px 12px;background:var(--panel,#161b26);border:1px solid var(--border,#2a3850);border-radius:8px}
+    .dash-bar label{font-size:13px;font-weight:600;margin:0}
+    .dash-bar input[type=date]{width:auto;margin:0;padding:7px 9px;font-size:14px}
+    .dash-bar button{width:auto;margin:0;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;border-radius:4px;border:1px solid var(--border,#2a3850);background:var(--panel-alt,#1d2431);color:var(--text,#e6eaf2)}
+    .dash-bar button.on{background:var(--accent,#d68c45);color:#161311;border-color:var(--accent,#d68c45)}</style>
+    <div class="dash-bar">
+      <label for="dash-from">${L.from}</label><input type="date" id="dash-from" value="${escAttr(state.dashFrom || '')}">
+      <label for="dash-to">${L.to}</label><input type="date" id="dash-to" value="${escAttr(state.dashTo || '')}">
+      <button type="button" id="dash-today">${L.today}</button><button type="button" id="dash-7">${L.w}</button><button type="button" id="dash-month">${L.m}</button><button type="button" id="dash-all">${L.all}</button>
+    </div>`;
+}
+function dashBarWire(rerender){
+  const iso = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const n = opNowTunis();
+  const today = iso(n.y, n.m, n.d);
+  const set = (f, t2) => { state.dashFrom = f; state.dashTo = t2; rerender(); };
+  const $ = (id) => document.getElementById(id);
+  $('dash-from').onchange = (e) => { state.dashFrom = e.target.value; rerender(); };
+  $('dash-to').onchange = (e) => { state.dashTo = e.target.value; rerender(); };
+  $('dash-today').onclick = () => set(today, today);
+  $('dash-7').onclick = () => { const d = new Date(Date.UTC(n.y, n.m - 1, n.d - 6)); set(d.toISOString().slice(0, 10), today); };
+  $('dash-month').onclick = () => set(iso(n.y, n.m, 1), today);
+  $('dash-all').onclick = () => set('', '');
+  /* met en évidence le bouton actif */
+  const f = state.dashFrom || '', t2 = state.dashTo || '';
+  const d7 = new Date(Date.UTC(n.y, n.m - 1, n.d - 6)).toISOString().slice(0, 10);
+  const active = (!f && !t2) ? 'dash-all' : (f === today && t2 === today) ? 'dash-today' : (f === d7 && t2 === today) ? 'dash-7' : (f === iso(n.y, n.m, 1) && t2 === today) ? 'dash-month' : '';
+  if(active) $(active).classList.add('on');
+}
+
 let chartRefs = [];
 function renderDashboard(main){
   chartRefs.forEach(c=>c.destroy()); chartRefs = [];
-  const recs = state.records;
+  const recs = state.records.filter(dashInRange);
   const totalQte = recs.reduce((s,r)=>s+r.qtite,0);
   const fournisseurs = [...new Set(recs.map(r=>r.fournisseur).filter(Boolean))];
   const locations = [...new Set(recs.map(r=>r.location).filter(Boolean))];
   main.innerHTML = `
     <div class="page-head"><h2>${ICONS.dash.replace('<svg','<svg width="18" height="18"')} ${t('cardDashTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    ${dashBarHtml()}
     <div class="stat-grid">
       <div class="stat-card"><div class="label">${t('statRecords')}</div><div class="value">${recs.length}</div></div>
       <div class="stat-card"><div class="label">${t('statQty')}</div><div class="value accent">${totalQte}</div></div>
@@ -960,6 +1258,7 @@ function renderDashboard(main){
       <div class="chart-panel wide"><h3>${t('chartRefFournTitle')}</h3><canvas id="chart-ref-fourn"></canvas></div>
     </div>`}`;
   document.getElementById('back').onclick = () => { state.view='stock-menu'; render(); };
+  dashBarWire(() => renderDashboard(main));
   if(recs.length===0) return;
   const palette = ['#d68c45','#5b8fb0','#5aad8c','#e2574c','#8a93a3','#a687c9','#c9a05b','#6fb0c9','#c97878'];
   const undef = t('undefinedLabel');
@@ -975,6 +1274,49 @@ function renderDashboard(main){
   const fournList = [...new Set(recs.map(r=>r.fournisseur||undef))];
   const datasets = fournList.map((f,i)=>({ label:f, data: refs.map(ref=>recs.filter(r=>(r.ref||undef)===ref && (r.fournisseur||undef)===f).reduce((s,r)=>s+r.qtite,0)), backgroundColor: palette[i%palette.length], borderRadius:2 }));
   chartRefs.push(new Chart(document.getElementById('chart-ref-fourn'),{type:'bar',data:{labels:refs,datasets},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#8a93a3',boxWidth:12,font:{size:11}}}},scales:{x:{stacked:true,ticks:{color:'#8a93a3'},grid:{display:false}},y:{stacked:true,ticks:{color:'#8a93a3'},grid:{color:'#313949'}}}}}));
+}
+
+function renderAnalyticsHub(main){
+  const recs = (Array.isArray(state.records) ? state.records : []).filter(dashInRange);
+  const qcs = (Array.isArray(state.qcRecords) ? state.qcRecords : []).filter(dashInRange);
+  const totalQty = recs.reduce((n,r)=>n+(Number(r.qtite)||0),0);
+  const supplierCount = new Set(recs.map(r=>(r.fournisseur||'').trim()).filter(Boolean)).size;
+  const locCount = new Set(recs.map(r=>(r.location||'').trim()).filter(Boolean)).size;
+  const inspected = qcs.reduce((n,r)=>n+(Number(r.qteControle)||0),0);
+  const rejects = qcs.reduce((n,r)=>n+(Number(r.qteNonOk)||0),0);
+  const rejectPct = inspected ? rejects/inspected*100 : 0;
+  const qtyBySupplier = {};
+  recs.forEach(r=>{const k=(r.fournisseur||'Non renseigné').trim()||'Non renseigné';qtyBySupplier[k]=(qtyBySupplier[k]||0)+(Number(r.qtite)||0);});
+  const topSuppliers = Object.entries(qtyBySupplier).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxSupplier = Math.max(1,...topSuppliers.map(x=>x[1]));
+  const fmt = n => Number(n||0).toLocaleString(state.lang==='ar'?'ar-TN':'fr-FR');
+  main.innerHTML = `<section class="analytics-shell">
+    <header class="an-head"><div><div class="an-eyebrow">IndustryOS · AI Monitoring</div><h2>Analytics Dashboard</h2><p class="an-sub">Vue opérationnelle fondée sur les données actuellement enregistrées dans votre application.</p></div><button class="an-back" id="an-back">← Retour au menu</button></header>
+    ${dashBarHtml()}
+    <div class="an-grid">
+      <div class="an-card"><div class="an-label">▦ Enregistrements de stock</div><div class="an-value an-blue">${fmt(recs.length)}</div><div class="an-note">Nombre de fiches stock chargées</div></div>
+      <div class="an-card"><div class="an-label">⇅ Quantité totale en stock</div><div class="an-value an-cyan">${fmt(totalQty)}</div><div class="an-note">Somme des quantités enregistrées</div></div>
+      <div class="an-card"><div class="an-label">◇ Fournisseurs</div><div class="an-value an-purple">${fmt(supplierCount)}</div><div class="an-note">Fournisseurs distincts dans les fiches</div></div>
+      <div class="an-card"><div class="an-label">⌖ Emplacements</div><div class="an-value an-green">${fmt(locCount)}</div><div class="an-note">Emplacements distincts renseignés</div></div>
+    </div>
+    <div class="an-layout">
+      <section class="an-panel"><h3>Répartition des quantités par fournisseur</h3><p class="an-desc">Top 5 — calculé à partir des fiches de stock chargées</p>
+        ${topSuppliers.length ? `<div class="an-bars">${topSuppliers.map(([name,val],i)=>`<div><div class="an-bar-head"><span>${escHtml(name)}</span><strong>${fmt(val)}</strong></div><div class="an-track"><div class="an-fill" style="width:${Math.max(2,val/maxSupplier*100)}%;opacity:${1-i*.1}"></div></div></div>`).join('')}</div>` : `<div class="empty-state" style="color:#91a0b8">Aucune donnée de stock disponible pour le moment.</div>`}
+      </section>
+      <section class="an-panel"><h3>Qualité · Contrôle</h3><p class="an-desc">Indicateurs calculés à partir des enregistrements de contrôle qualité</p>
+        <div class="an-value">${fmt(inspected)}</div><div class="an-note">Pièces contrôlées</div><div style="height:1px;background:#202c40;margin:15px 0"></div>
+        <div class="an-bar-head"><span>Pièces non conformes</span><strong>${fmt(rejects)}</strong></div><div class="an-track"><div class="an-fill" style="width:${Math.min(100,rejectPct)}%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div><div class="an-note">Taux de non-conformité : ${rejectPct.toLocaleString('fr-FR',{maximumFractionDigits:1})}% · ${qcs.length} fiches de contrôle</div>
+      </section>
+    </div>
+    <div class="an-bottom">
+      <div class="an-mini"><span>Activité stock</span><strong>${fmt(recs.length)}</strong><span>fiches disponibles</span></div>
+      <div class="an-mini"><span>Contrôle qualité</span><strong>${fmt(qcs.length)}</strong><span>fiches de contrôle disponibles</span></div>
+      <div class="an-mini"><span>Couverture des données</span><strong>${recs.length || qcs.length ? 'Active' : 'À alimenter'}</strong><span>Les indicateurs évoluent avec les données enregistrées</span></div>
+    </div>
+    <div class="an-foot">Les valeurs affichées proviennent des données chargées dans l’application. Aucun chiffre de démonstration n’est ajouté. Les coûts, arrêts machine et économies ne sont pas affichés tant qu’une source réelle correspondante n’est pas disponible.</div>
+  </section>`;
+  document.getElementById('an-back').onclick=async()=>{await loadRecords();await loadQcRecords();state.view='analytics-hub';render();};
+  dashBarWire(() => renderAnalyticsHub(main));
 }
 
 /* ================= CATALOGUE ================= */
@@ -1101,7 +1443,7 @@ function renderQcData(main){
     return (r[c.key] ?? '').toString().toLowerCase().includes(q);
   }));
   main.innerHTML = `
-    <div class="page-head"><h2>${ICONS.data.replace('<svg','<svg width="18" height="18"')} ${t('cardQcDataTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    <div class="page-head"><h2>${ICONS.data.replace('<svg','<svg width="18" height="18"')} ${t('cardQcDataTitle')}</h2>${state.currentUser.role === 'entrepreneur' ? '' : `<div class="back-link" id="back">${ICONS.back} ${t('back')}</div>`}</div>
     <div class="toolbar"><button class="btn blue" id="export-btn" style="width:auto;padding:10px 16px;">${ICONS.download} ${t('exportBtn')}</button></div>
     <div class="table-wrap">
       ${state.qcRecords.length===0 ? `<div class="empty-state">${t('qcNoRecords')}.</div>` : `
@@ -1115,7 +1457,8 @@ function renderQcData(main){
         </tbody>
       </table>`}
     </div>`;
-  document.getElementById('back').onclick = () => { state.view='qc-menu'; render(); };
+  const qcBackEl = document.getElementById('back');
+  if(qcBackEl) qcBackEl.onclick = () => { state.view='qc-menu'; render(); };
   document.getElementById('export-btn').onclick = () => exportQcToExcel(filtered);
   main.querySelectorAll('.qc-col-search').forEach(inp => {
     inp.oninput = () => { state.qcSearch[inp.dataset.key] = inp.value; state.lastQcSearchFocus = inp.dataset.key; renderQcData(main); };
@@ -1190,8 +1533,8 @@ function renderQcRow(r){
     ${DEFECT_COLS.map(d => `<td class="num">${r[d.key]||0}</td>`).join('')}
     <td>${escHtml(r.user)}</td>
     <td class="row-actions">
-      <button class="icon-btn" id="qedit-${r.id}" title="${t('editedToast')}">${ICONS.edit}</button>
-      <button class="icon-btn del" id="qdel-${r.id}" title="${t('deletedToast')}">${ICONS.del}</button>
+      ${state.currentUser.role === 'entrepreneur' ? '' : `<button class="icon-btn" id="qedit-${r.id}" title="${t('editedToast')}">${ICONS.edit}</button>
+      <button class="icon-btn del" id="qdel-${r.id}" title="${t('deletedToast')}">${ICONS.del}</button>`}
     </td>
   </tr>`;
 }
@@ -1199,12 +1542,13 @@ function renderQcRow(r){
 let qcChartRefs = [];
 function renderQcDashboard(main){
   qcChartRefs.forEach(c => c.destroy()); qcChartRefs = [];
-  const recs = state.qcRecords;
+  const recs = state.qcRecords.filter(dashInRange);
   const totalControle = recs.reduce((s,r)=>s+r.qteControle,0);
   const totalNonOk = recs.reduce((s,r)=>s+r.qteNonOk,0);
   const globalRate = totalControle > 0 ? (totalNonOk/totalControle*100) : 0;
   main.innerHTML = `
     <div class="page-head"><h2>${ICONS.dash.replace('<svg','<svg width="18" height="18"')} ${t('cardQcDashTitle')}</h2><div class="back-link" id="back">${ICONS.back} ${t('back')}</div></div>
+    ${dashBarHtml()}
     <div class="stat-grid">
       <div class="stat-card"><div class="label">${t('qcStatControls')}</div><div class="value">${recs.length}</div></div>
       <div class="stat-card"><div class="label">${t('qcStatControlled')}</div><div class="value blue">${totalControle}</div></div>
@@ -1218,6 +1562,7 @@ function renderQcDashboard(main){
       <div class="chart-panel wide"><h3>${t('qcChartRefTitle')}</h3><canvas id="qc-chart-ref"></canvas></div>
     </div>`}`;
   document.getElementById('back').onclick = () => { state.view='qc-menu'; render(); };
+  dashBarWire(() => renderQcDashboard(main));
   if(recs.length===0) return;
   const palette = ['#d68c45','#5b8fb0','#5aad8c','#e2574c','#8a93a3','#a687c9','#c9a05b','#6fb0c9'];
   const defectTotals = {};
@@ -1264,6 +1609,7 @@ async function renderUsers(main){
             <option value="user">${t('roleUser')}</option>
             <option value="employee">${t('roleEmployee')}</option>
             <option value="visitor">${t('roleVisitor')}</option>
+            <option value="entrepreneur">${t('roleEntrepreneur')}</option>
             <option value="admin">${t('roleAdmin')}</option>
           </select>
         </div>
@@ -1284,6 +1630,7 @@ async function renderUsers(main){
                   <option value="user" ${p.role==='user'?'selected':''}>${t('roleUser')}</option>
                   <option value="employee" ${p.role==='employee'?'selected':''}>${t('roleEmployee')}</option>
                   <option value="visitor" ${p.role==='visitor'?'selected':''}>${t('roleVisitor')}</option>
+                  <option value="entrepreneur" ${p.role==='entrepreneur'?'selected':''}>${t('roleEntrepreneur')}</option>
                   <option value="admin" ${p.role==='admin'?'selected':''}>${t('roleAdmin')}</option>
                 </select>
               </td>
@@ -2678,7 +3025,29 @@ async function sendQualityReportTest(){
 
 /* ================= PORTAIL OPÉRATEUR (8 tables de contrôle) ================= */
 const OP_TYPES = ['Grani', 'Rayure', 'Trace', 'Piqûre', 'Coup', 'Cosse', 'Autre'];
-const OP_H1 = { morning: 5, afternoon: 13, night: 21 };
+/* Horaires des équipes (minutes depuis minuit) : matin 5h30->13h15, après-midi 13h15->21h00, nuit 21h00->5h30 */
+const OP_SHIFTS = {
+  morning:   { start: 5 * 60 + 30,  end: 13 * 60 + 15, label: '5h30 \u2192 13h15' },
+  afternoon: { start: 13 * 60 + 15, end: 21 * 60,      label: '13h15 \u2192 21h00' },
+  night:     { start: 21 * 60,      end: 29 * 60 + 30, label: '21h00 \u2192 5h30' }
+};
+/* Pauses : 20 minutes déduites des heures 10:00-11:00 et 15:00-16:00 */
+const OP_BREAKS = [{ hour: 10, minutes: 20 }, { hour: 15, minutes: 20 }];
+function opFmtMin(m){ const x = ((m % 1440) + 1440) % 1440; return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; }
+function opSlots(key){
+  const s = OP_SHIFTS[key] || OP_SHIFTS.morning;
+  const slots = [];
+  let t = s.start;
+  while(t < s.end){
+    const e = Math.min((Math.floor(t / 60) + 1) * 60, s.end);
+    let work = e - t, brk = 0;
+    const clockHour = Math.floor(t / 60) % 24;
+    OP_BREAKS.forEach(b => { if(b.hour === clockHour && t % 60 === 0 && e - t === 60){ brk = b.minutes; work -= b.minutes; } });
+    slots.push({ time: `${opFmtMin(t)} \u2192 ${opFmtMin(e)}`, start: t, end: e, work, brk });
+    t = e;
+  }
+  return slots;
+}
 const OP_I18N = {
   portal:  { fr: 'Portail opérateur', ar: 'بوابة المشغّل' },
   team:    { fr: 'Équipe actuelle', ar: 'الفريق الحالي' },
@@ -2701,11 +3070,33 @@ const OP_I18N = {
   teamTot: { fr: 'Total équipe', ar: 'مجموع الفريق' },
   sMorning:{ fr: 'Matin', ar: 'الصباح' },
   sAfter:  { fr: 'Après-midi', ar: 'المساء' },
-  sNight:  { fr: 'Nuit', ar: 'الليل' }
+  sNight:  { fr: 'Nuit', ar: 'الليل' },
+  refDem:  { fr: 'Ref / Demande', ar: 'المرجع / الطلب' },
+  refDemSub:{ fr: 'Liste Ref → Demande : en tapant une Ref dans une table de contrôle, la Qtite (demande) se remplit automatiquement', ar: 'قائمة المرجع ← الطلب: عند كتابة المرجع في أي طاولة تُملأ الكمية (Qtite) تلقائياً' },
+  addBtn:  { fr: 'Ajouter', ar: 'إضافة' },
+  noRefDem:{ fr: 'Aucune référence enregistrée', ar: 'لا توجد مراجع مسجلة' },
+  needRefSql:{ fr: 'Table op_ref_demand introuvable : exécutez le script SQL 15_op_ref_demand.sql dans Supabase', ar: 'جدول op_ref_demand غير موجود: شغّل ملف SQL رقم 15_op_ref_demand.sql في Supabase' },
+  delConfirm:{ fr: 'Supprimer cette référence ?', ar: 'حذف هذا المرجع؟' },
+  tableLbl:{ fr: 'Table', ar: 'الطاولة' },
+  refLbl:  { fr: 'Ref', ar: 'المرجع' },
+  demLbl:  { fr: 'Demande', ar: 'الطلب' },
+  emptyDay:{ fr: 'Aucune donnée enregistrée pour cette table à cette date / équipe', ar: 'لا توجد بيانات مسجلة لهذه الطاولة في هذا اليوم / الفريق' },
+  totalLbl:{ fr: 'Total', ar: 'المجموع' },
+  exportQc:{ fr: 'Exporter vers Données contrôle', ar: 'تصدير إلى بيانات المراقبة' },
+  exportedQc:{ fr: 'fiche(s) exportée(s) vers Données contrôle', ar: 'سجل(ات) تم تصديرها إلى بيانات المراقبة' },
+  exportNone:{ fr: 'Rien à exporter pour cette équipe (aucune Ref avec Réel ou Rejet)', ar: 'لا يوجد ما يُصدَّر لهذا الفريق (لا مرجع مع Réel أو Rejet)' },
+  needQcSql:{ fr: 'Colonne op_key absente : exécutez le script SQL 18_qc_op_key.sql dans Supabase', ar: 'عمود op_key غير موجود: شغّل ملف SQL رقم 18_qc_op_key.sql في Supabase' }
 };
 function opT(k){ const o = OP_I18N[k]; return o ? (o[state.lang] || o.fr) : k; }
 function opPad(n){ return String(n).padStart(2, '0'); }
-function opErrMsg(e){ const m = (e && e.message) || String(e); return /op_tables/i.test(m) ? opT('noTable') : m; }
+function opErrMsg(e){
+  const m = (e && e.message) || String(e);
+  /* droits refusés (RLS) : ce n'est PAS une table manquante */
+  if(/permission denied|row-level security|violates|policy|not allowed|42501/i.test(m) || (e && e.code === '42501')) return 'Accès refusé par Supabase (' + m + ') : exécutez 17_op_tables_policies.sql';
+  /* table réellement absente */
+  if(/op_tables/i.test(m) && /does not exist|could not find|schema cache|42P01|PGRST205/i.test(m + ' ' + ((e && e.code) || ''))) return opT('noTable');
+  return m;
+}
 
 function opNowTunis(){
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -2713,38 +3104,57 @@ function opNowTunis(){
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
   }).formatToParts(new Date());
   const g = (t) => parts.find(p => p.type === t).value;
-  return { y: +g('year'), m: +g('month'), d: +g('day'), hour: (+g('hour')) % 24 };
+  return { y: +g('year'), m: +g('month'), d: +g('day'), hour: (+g('hour')) % 24, minute: +g('minute') };
 }
-/* Équipe selon l'heure d'ouverture : 5->13 matin, 13->21 après-midi, 21->5 nuit (date = jour où l'équipe a commencé) */
+/* Équipe selon l'heure d'ouverture (date = jour où l'équipe a commencé) */
 function opCurrentShift(){
   const n = opNowTunis();
-  let key, h1, date = `${n.y}-${opPad(n.m)}-${opPad(n.d)}`;
-  if(n.hour >= 21){ key = 'night'; h1 = 21; }
-  else if(n.hour >= 13){ key = 'afternoon'; h1 = 13; }
-  else if(n.hour >= 5){ key = 'morning'; h1 = 5; }
-  else{ key = 'night'; h1 = 21; date = new Date(Date.UTC(n.y, n.m - 1, n.d - 1)).toISOString().slice(0, 10); }
-  return { key, h1, date };
+  const m = n.hour * 60 + n.minute;
+  let key, date = `${n.y}-${opPad(n.m)}-${opPad(n.d)}`;
+  if(m >= 21 * 60){ key = 'night'; }
+  else if(m >= 13 * 60 + 15){ key = 'afternoon'; }
+  else if(m >= 5 * 60 + 30){ key = 'morning'; }
+  else{ key = 'night'; date = new Date(Date.UTC(n.y, n.m - 1, n.d - 1)).toISOString().slice(0, 10); }
+  return { key, date };
 }
-function opShiftLabel(h1){ return `${h1 % 24} \u2192 ${(h1 + 8) % 24}`; }
-function opRowLabel(h){ return `${h % 24}:00 \u2192 ${(h + 1) % 24}:00`; }
-function opBlankRows(h1){
-  return Array.from({ length: 8 }, (_, i) => ({ time: opRowLabel(h1 + i), demand: 0, real: null, reject: 0, rejects: [], comment: '' }));
+function opShiftLabel(key){ return (OP_SHIFTS[key] || OP_SHIFTS.morning).label; }
+/* minute courante dans l'échelle de l'équipe (la nuit après minuit = +24h) */
+function opShiftNowMin(key){
+  const n = opNowTunis();
+  let m = n.hour * 60 + n.minute;
+  if(key === 'night' && m < OP_SHIFTS.night.start) m += 1440;
+  return m;
+}
+function opBlankRows(key){
+  return opSlots(key).map(s => ({ time: s.time, work: s.work, brk: s.brk, demand: 0, real: null, reject: 0, rejects: [], comment: '' }));
 }
 function opNormalize(rec){
-  const h1 = OP_H1[rec.shift] || 5;
-  const base = opBlankRows(h1);
+  const base = opBlankRows(rec.shift);
   const src = Array.isArray(rec.hours_data) ? rec.hours_data : [];
-  rec.hours_data = base.map((b, i) => Object.assign(b, src[i] || {}));
+  const byTime = {};
+  src.forEach(r => { if(r && r.time) byTime[r.time] = r; });
+  rec.hours_data = base.map(b => {
+    const o = byTime[b.time];
+    if(o){ b.real = (o.real === undefined ? null : o.real); b.reject = Number(o.reject) || 0; b.rejects = Array.isArray(o.rejects) ? o.rejects : []; b.comment = o.comment || ''; }
+    return b;
+  });
   rec.ref = rec.ref || '';
   rec.employee_name = rec.employee_name || '';
   rec.qty_total = Number(rec.qty_total) || 0;
+  const parts = opDistribute(rec.qty_total, rec.hours_data.map(r => r.work));
+  rec.hours_data.forEach((r, i) => { r.demand = parts[i]; });
   return rec;
 }
-/* Quantité répartie équitablement sur les 8 cases rouges (le reste va aux premières lignes) */
-function opDistribute(total){
+/* Quantité répartie selon les minutes de travail de chaque ligne (méthode du plus fort reste : la somme reste exacte) */
+function opDistribute(total, works){
   const q = Math.max(0, Math.floor(Number(total) || 0));
-  const base = Math.floor(q / 8), rem = q % 8;
-  return Array.from({ length: 8 }, (_, i) => base + (i < rem ? 1 : 0));
+  const w = (works && works.length) ? works : Array(8).fill(60);
+  const sum = w.reduce((s, x) => s + x, 0) || 1;
+  const exact = w.map(x => q * x / sum);
+  const out = exact.map(Math.floor);
+  let rest = q - out.reduce((s, x) => s + x, 0);
+  exact.map((v, i) => [v - Math.floor(v), i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).forEach(([, i]) => { if(rest > 0){ out[i]++; rest--; } });
+  return out;
 }
 function opTotals(rec){
   let demand = 0, real = 0, rej = 0;
@@ -2759,7 +3169,10 @@ function opTypeTotals(rec){
 }
 
 function opIsCurrent(rec){ const sh = opCurrentShift(); return rec.sheet_date === sh.date && rec.shift === sh.key; }
-function opIsReadOnly(rec){ return !opIsCurrent(rec) && !(state.currentUser && state.currentUser.role === 'admin'); }
+function opRole(){ return state.currentUser ? state.currentUser.role : ''; }
+/* Employé(e) et Entrepreneur : pas de boutons Historique / Ref-Demande ni de retour au menu général */
+function opIsRestricted(){ return opRole() === 'employee' || opRole() === 'entrepreneur'; }
+function opIsReadOnly(rec){ return opRole() === 'entrepreneur' || (!opIsCurrent(rec) && opRole() !== 'admin'); }
 async function opLoadOrCreate(no, date, shiftKey, create){
   const key = { table_no: no, sheet_date: date, shift: shiftKey };
   let res = await sb.from('op_tables').select('*').match(key).maybeSingle();
@@ -2767,7 +3180,7 @@ async function opLoadOrCreate(no, date, shiftKey, create){
   if(!res.data){
     if(!create) return null;
     const who = state.currentUser ? state.currentUser.name : '';
-    const row = Object.assign({}, key, { ref: '', qty_total: 0, hours_data: opBlankRows(OP_H1[shiftKey]), created_by: who, updated_by: who, employee_name: who });
+    const row = Object.assign({}, key, { ref: '', qty_total: 0, hours_data: opBlankRows(shiftKey), created_by: who, updated_by: who, employee_name: who });
     let up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
     if(up.error && /employee_name/i.test(up.error.message || '')){
       delete row.employee_name;
@@ -2779,10 +3192,29 @@ async function opLoadOrCreate(no, date, shiftKey, create){
   }
   return opNormalize(res.data);
 }
-async function opPersist(showOk){
-  const r = state.opRec;
+/* Crée la ligne en base si elle n'existe pas encore (jour sans données ouvert en consultation) */
+async function opEnsureRow(r){
+  if(r.id) return;
+  const who = state.currentUser ? state.currentUser.name : '';
+  const key = { table_no: r.table_no, sheet_date: r.sheet_date, shift: r.shift };
+  const row = Object.assign({}, key, { ref: r.ref || '', qty_total: r.qty_total || 0, hours_data: r.hours_data, created_by: who, updated_by: who, employee_name: r.employee_name || who });
+  let up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
+  if(up.error && /employee_name/i.test(up.error.message || '')){
+    delete row.employee_name;
+    up = await sb.from('op_tables').upsert(row, { onConflict: 'table_no,sheet_date,shift', ignoreDuplicates: true });
+  }
+  if(up.error) throw up.error;
+  const res = await sb.from('op_tables').select('id').match(key).single();
+  if(res.error) throw res.error;
+  r.id = res.data.id;
+  r._virtual = false;
+}
+async function opSaveRec(r, showOk){
   if(!r) return;
+  /* jour sans données et rien saisi : on ne crée pas de ligne vide */
+  if(r._virtual && !r.ref && !r.qty_total && !r.hours_data.some(h => (h.real !== null && h.real !== undefined) || h.reject || h.comment)) return;
   try{
+    await opEnsureRow(r);
     const payload = {
       ref: r.ref || '', qty_total: r.qty_total || 0, hours_data: r.hours_data, employee_name: r.employee_name || '',
       updated_by: state.currentUser ? state.currentUser.name : '', updated_at: new Date().toISOString()
@@ -2800,14 +3232,19 @@ async function opPersist(showOk){
     showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
   }
 }
+async function opPersist(showOk){ return opSaveRec(state.opRec, showOk); }
 async function opOpenTable(no, o){
   o = o || {};
   try{
     const sh = opCurrentShift();
     const date = o.date || sh.date, shiftKey = o.shift || sh.key;
     const isCur = date === sh.date && shiftKey === sh.key;
-    const rec = await opLoadOrCreate(no, date, shiftKey, isCur);
-    if(!rec){ showToast(opT('noData'), true); return false; }
+    let rec = await opLoadOrCreate(no, date, shiftKey, isCur && opRole() !== 'entrepreneur');
+    if(!rec){
+      /* jour / équipe sans données : on affiche quand même la table vide (rien n'est créé tant que rien n'est saisi) */
+      rec = opNormalize({ id: null, _virtual: true, table_no: no, sheet_date: date, shift: shiftKey, ref: '', qty_total: 0, hours_data: opBlankRows(shiftKey), employee_name: '' });
+    }
+    await opLoadRefDem();
     state.opRec = rec;
     state.opFrom = o.from || 'portal';
     state.view = 'op-table';
@@ -2912,12 +3349,10 @@ const OP_CSS = `
   .op-sec-tot{font-size:13px;color:var(--text-muted);margin:0 0 10px}
   .op-tile.off{background:var(--panel-alt);border-color:var(--border);color:var(--text-muted);cursor:default;opacity:.55}
   .op-tile.off:hover{background:var(--panel-alt)}
-  #op-name{font-size:14px;font-weight:700;white-space:nowrap;text-overflow:ellipsis;cursor:default;pointer-events:none}
   .op-table .c-real.c-short,.op-hv.c-short{background:#e3162c!important;color:#fff!important}
   .op-modal #op-m-dem{background:#fff;color:#1a2230;font-weight:700;text-align:center;opacity:1}
   .op-modal textarea.op-need{border-color:#e3162c;box-shadow:0 0 0 2px rgba(227,22,44,.45)}
   .op-req{color:#ff6b6b;font-weight:700;font-size:12px;margin-inline-start:6px}
-  #op-name{padding:0 6px!important}
   .op-hl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .op-table td:not(.c-com){border:1px solid #cfd6e2}
   .op-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:0 0 14px}
@@ -2925,7 +3360,6 @@ const OP_CSS = `
     .op-head{grid-template-columns:minmax(210px,1.7fr) minmax(160px,1.3fr) repeat(4,minmax(96px,1fr))}
     .op-kpi{grid-template-columns:repeat(5,1fr)}
   }
-  @media (max-width:640px){ #op-name{font-size:13px} .op-head > div:first-child{grid-column:span 2} }
 `;
 
 const OP2_CSS = `
@@ -2991,7 +3425,18 @@ const OP2_CSS = `
   .op2-tchip{background:#fff;border:1px solid #c6cdd9;border-radius:14px;padding:4px 11px;font-size:13px;display:inline-flex;gap:7px;align-items:center;color:#1d2433;margin:0 4px 4px 0}
   .op2-tchip b{background:#e6ebf2;border-radius:10px;padding:0 7px}
   .op2-table,.op2-sum{min-width:0!important}
-  .op2-params #op-name{padding:9px 10px!important;font-size:15px;height:auto;pointer-events:none}
+  .op-hf{align-items:center}
+  .op-hf label{margin:0;font-size:13px;font-weight:600}
+  .op-hf input,.op-hf select{width:auto;margin:0}
+  .op-ht{min-width:860px}
+  .op-ht td.num{text-align:right}
+  .op-ht td.bad{color:#d32f3f;font-weight:700}
+  .op-ht td.good{color:#1f9d4a;font-weight:700}
+  .op-ht td.warn{color:#b26a00;font-weight:700}
+  .op-hrow{cursor:pointer}
+  .op-hrow:hover td{background:var(--panel-alt)}
+  .op-ht tfoot td{font-weight:700;background:var(--panel-alt);border-top:2px solid var(--border);border-bottom:none}
+  .op2-params select{width:100%;margin:0;padding:9px 10px;border:1px solid #b9c1ce;border-radius:3px;background:#fff;color:#1d2433;font-size:15px;font-weight:700;font-family:inherit}
   .op2-params #op-ref{font-size:15px}
   .op2-sum thead th,.op2-sum tbody th{text-transform:none;letter-spacing:0}
   .op2-sum tbody th{color:#1d2433}
@@ -3023,15 +3468,20 @@ const OP2_CSS = `
 function renderOpPortal(main){
   const sh = opCurrentShift();
   main.innerHTML = `<style>${OP_CSS}</style>
-    <div class="back-link" id="op-back" style="margin-bottom:14px;">${ICONS.back} ${t('menuTitle')}</div>
-    <div class="menu-head"><h1>${opT('portal')}</h1><p>${opT('team')} : <strong>${opShiftLabel(sh.h1)}</strong> &mdash; ${sh.date}</p></div>
-    <div class="op-nav" style="margin-bottom:16px;"><button type="button" class="op-nb" id="op-hist" style="padding:11px 18px;">&#128197; ${opT('history')}</button></div>
+    ${opIsRestricted() ? '' : `<div class="back-link" id="op-back" style="margin-bottom:14px;">${ICONS.back} ${t('menuTitle')}</div>`}
+    <div class="menu-head"><h1>${opT('portal')}</h1><p>${opT('team')} : <strong>${opShiftLabel(sh.key)}</strong> &mdash; ${sh.date}</p></div>
+    ${opIsRestricted() ? '' : `<div class="op-nav" style="margin-bottom:16px;"><button type="button" class="op-nb" id="op-hist" style="padding:11px 18px;">&#128197; ${opT('history')}</button> <button type="button" class="op-nb" id="op-refdem" style="padding:11px 18px;">&#9636; ${opT('refDem')}</button> <button type="button" class="op-nb" id="op-export" style="padding:11px 18px;">&#8680; ${opT('exportQc')}</button></div>`}
     <div class="op-tiles">${Array.from({ length: 8 }, (_, i) => `
       <div class="op-tile" data-no="${i + 1}"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div><div class="op-tile-stat" id="op-stat-${i + 1}">&nbsp;</div></div>`).join('')}
     </div>`;
-  document.getElementById('op-back').onclick = () => { state.view = 'menu'; render(); };
-  document.getElementById('op-hist').onclick = () => { state.opHistDate = null; state.view = 'op-history'; render(); };
+  const opBackEl = document.getElementById('op-back'), opHistEl = document.getElementById('op-hist');
+  if(opBackEl) opBackEl.onclick = () => { state.view = 'menu'; render(); };
+  if(opHistEl) opHistEl.onclick = () => { state.opHistDate = null; state.view = 'op-history'; render(); };
   main.querySelectorAll('.op-tile').forEach(el => { el.onclick = () => opOpenTable(+el.dataset.no, { from: 'portal' }); });
+  const opRdEl = document.getElementById('op-refdem');
+  if(opRdEl) opRdEl.onclick = () => opOpenRefDemand();
+  const opExEl = document.getElementById('op-export');
+  if(opExEl){ opExEl.onclick = () => opExportCurrentShift(); opAutoExport(); }
   (async () => {
     try{
       const { data, error } = await sb.from('op_tables').select('table_no, qty_total, hours_data').eq('sheet_date', sh.date).eq('shift', sh.key);
@@ -3048,6 +3498,159 @@ function renderOpPortal(main){
       showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
     }
   })();
+}
+
+
+/* ===== Liste Ref -> Demande : sert au remplissage automatique de Qtite dans les tables de contrôle ===== */
+function opRefKey(r){ return (r || '').toString().trim().toLowerCase(); }
+async function opLoadRefDem(){
+  try{
+    const { data, error } = await sb.from('op_ref_demand').select('ref, demande');
+    if(error) throw error;
+    state.opRefDem = {};
+    (data || []).forEach(x => { state.opRefDem[opRefKey(x.ref)] = { ref: x.ref, demande: Number(x.demande) || 0 }; });
+    return true;
+  }catch(e){
+    console.error('op ref_demand error:', e);
+    state.opRefDem = state.opRefDem || {};
+    return false;
+  }
+}
+async function opOpenRefDemand(){
+  const okLoad = await opLoadRefDem();
+  if(!okLoad){ showToast(opT('needRefSql'), true); return; }
+  const ov = document.createElement('div');
+  ov.className = 'op-ov';
+  const th = 'padding:6px;border:1px solid #d9dee7;background:#eef1f6;font-size:13px';
+  const td = 'padding:3px;border:1px solid #e1e5ec';
+  ov.innerHTML = `<div class="op-modal" style="width:min(520px,100%)">
+    <div class="op-m-title">${opT('refDem')}</div>
+    <p style="font-size:12px;color:#5b6575;margin:0 0 10px">${opT('refDemSub')}</p>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr><th style="${th}">${opT('refLbl')}</th><th style="${th}">${opT('demLbl')}</th><th style="${th};width:44px"></th></tr></thead>
+      <tbody id="rd-body"></tbody>
+      <tfoot><tr>
+        <td style="${td}"><input type="text" id="rd-new-ref" autocomplete="off" placeholder="ref" style="text-align:center"></td>
+        <td style="${td}"><input type="number" id="rd-new-dem" min="0" step="1" inputmode="numeric" placeholder="0" style="text-align:center;font-weight:700"></td>
+        <td style="${td}"><button type="button" class="btn" id="rd-add" style="width:100%;padding:8px 4px">+</button></td>
+      </tr></tfoot>
+    </table>
+    <div class="op-m-actions" style="margin-top:12px"><button type="button" class="btn op-cancel" id="rd-close">${opT('close')}</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const body = ov.querySelector('#rd-body');
+  const toInt = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  function draw(){
+    const list = Object.values(state.opRefDem).sort((a, b) => a.ref.localeCompare(b.ref));
+    body.innerHTML = list.length ? list.map(x => `
+      <tr><td style="${td};text-align:center;font-weight:700">${escHtml(x.ref)}</td>
+      <td style="${td}"><input type="number" class="rd-dem" data-ref="${escHtml(x.ref)}" min="0" step="1" inputmode="numeric" value="${x.demande}" style="text-align:center;font-weight:700"></td>
+      <td style="${td};text-align:center"><button type="button" class="op-x rd-del" data-ref="${escHtml(x.ref)}" style="width:34px;height:34px">&times;</button></td></tr>`).join('')
+      : `<tr><td colspan="3" style="padding:12px;text-align:center;color:#5b6575;font-size:13px">${opT('noRefDem')}</td></tr>`;
+    body.querySelectorAll('.rd-dem').forEach(el => {
+      el.onchange = async () => {
+        const ref = el.dataset.ref, v = toInt(el.value);
+        const { error } = await sb.from('op_ref_demand').update({ demande: v, updated_at: new Date().toISOString() }).eq('ref', ref);
+        if(error){ showToast(`${opT('err')}: ${error.message}`, true); return; }
+        state.opRefDem[opRefKey(ref)].demande = v;
+        showToast(opT('saved'));
+      };
+    });
+    body.querySelectorAll('.rd-del').forEach(el => {
+      el.onclick = async () => {
+        if(!confirm(opT('delConfirm'))) return;
+        const ref = el.dataset.ref;
+        const { error } = await sb.from('op_ref_demand').delete().eq('ref', ref);
+        if(error){ showToast(`${opT('err')}: ${error.message}`, true); return; }
+        delete state.opRefDem[opRefKey(ref)];
+        draw();
+      };
+    });
+  }
+  draw();
+  ov.querySelector('#rd-add').onclick = async () => {
+    const refEl = ov.querySelector('#rd-new-ref'), demEl = ov.querySelector('#rd-new-dem');
+    const ref = refEl.value.trim(), v = toInt(demEl.value);
+    if(!ref){ refEl.focus(); return; }
+    const key = opRefKey(ref);
+    const exists = state.opRefDem[key];
+    const row = { ref: exists ? exists.ref : ref, demande: v, updated_at: new Date().toISOString() };
+    const { error } = await sb.from('op_ref_demand').upsert(row, { onConflict: 'ref' });
+    if(error){ showToast(`${opT('err')}: ${error.message}`, true); return; }
+    state.opRefDem[key] = { ref: row.ref, demande: v };
+    refEl.value = ''; demEl.value = '';
+    showToast(opT('saved'));
+    draw();
+    refEl.focus();
+  };
+  const onKey = (e) => { if(e.key === 'Escape') close(); };
+  function close(){ document.removeEventListener('keydown', onKey); ov.remove(); }
+  document.addEventListener('keydown', onKey);
+  ov.querySelector('#rd-close').onclick = close;
+  ov.addEventListener('mousedown', (e) => { if(e.target === ov) close(); });
+}
+
+/* ===== Export d'une équipe du portail opérateur vers Données contrôle (qc_records) ===== */
+function opNorm(x){ return (x || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+function opShiftEnded(date, key){
+  const n = opNowTunis();
+  const [y, m, d] = date.split('-').map(Number);
+  const endMs = Date.UTC(y, m - 1, d) + OP_SHIFTS[key].end * 60000;
+  const nowMs = Date.UTC(n.y, n.m - 1, n.d) + (n.hour * 60 + n.minute) * 60000;
+  return nowMs >= endMs;
+}
+/* une fiche par table (Ref, Qtité contrôle = Réel, Non OK = Rejet, défauts par type) ; ré-export = mise à jour, pas de doublon */
+async function opExportShiftToQc(date, key){
+  const { data, error } = await sb.from('op_tables').select('*').eq('sheet_date', date).eq('shift', key);
+  if(error) throw error;
+  if(!state.catalog || !state.catalog.length) await loadCatalog();
+  const rows = [];
+  (data || []).forEach(r => {
+    const rec = opNormalize(Object.assign({}, r));
+    const ref = (rec.ref || '').trim();
+    const tot = opTotals(rec);
+    if(!ref || (tot.real <= 0 && tot.rej <= 0)) return;
+    const cat = (state.catalog || []).find(c => opNorm(c.ref) === opNorm(ref));
+    const ty = opTypeTotals(rec);
+    const row = {
+      record_date: date, fournisseur: cat ? (cat.fournisseur || '') : '', ref: ref, designation: cat ? (cat.designation || '') : '',
+      qte_controle: tot.real, qte_non_ok: tot.rej, grani: 0, rayure: 0, trace: 0, piqure: 0, coup: 0, cosse: 0, autre: 0,
+      user_name: rec.employee_name || 'Portail opérateur', op_key: `${date}|${key}|${r.table_no}`
+    };
+    OP_TYPES.forEach(tp => { const k = opNorm(tp); if(k in row) row[k] = ty[tp] || 0; });
+    rows.push(row);
+  });
+  if(!rows.length) return 0;
+  const up = await sb.from('qc_records').upsert(rows, { onConflict: 'op_key' });
+  if(up.error) throw up.error;
+  return rows.length;
+}
+async function opExportCurrentShift(){
+  const sh = opCurrentShift();
+  try{
+    const n = await opExportShiftToQc(sh.date, sh.key);
+    showToast(n ? `${n} ${opT('exportedQc')}` : opT('exportNone'), !n);
+  }catch(e){
+    console.error('op export error:', e);
+    showToast(/op_key|PGRST204|42703/i.test((e && e.message) || '') ? opT('needQcSql') : `${opT('err')}: ${opErrMsg(e)}`, true);
+  }
+}
+/* export automatique des équipes terminées (aujourd'hui et hier) qui n'ont pas encore été exportées ; se lance à l'ouverture du portail */
+async function opAutoExport(){
+  if(state.opAutoDone) return;
+  state.opAutoDone = true;
+  try{
+    const n = opNowTunis();
+    const today = `${n.y}-${opPad(n.m)}-${opPad(n.d)}`;
+    const yest = new Date(Date.UTC(n.y, n.m - 1, n.d - 1)).toISOString().slice(0, 10);
+    const cands = [];
+    [yest, today].forEach(d => ['morning', 'afternoon', 'night'].forEach(k => { if(opShiftEnded(d, k)) cands.push({ d, k }); }));
+    if(!cands.length) return;
+    const ex = await sb.from('qc_records').select('op_key').in('record_date', [yest, today]).not('op_key', 'is', null);
+    if(ex.error) return;   /* colonne absente : pas d'export automatique */
+    const done = new Set((ex.data || []).map(x => x.op_key.split('|').slice(0, 2).join('|')));
+    for(const c of cands){ if(!done.has(`${c.d}|${c.k}`)) await opExportShiftToQc(c.d, c.k); }
+  }catch(e){ console.error('op auto export error:', e); }
 }
 
 const OP_REJ_OK = 2, OP_REJ_WARN = 5;   /* taux de rejet : <=2% vert, <=5% orange, au-dela rouge */
@@ -3113,15 +3716,17 @@ function opRefreshCells(){
   const rec = state.opRec;
   if(!rec) return;
   const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = (v === null || v === undefined) ? '' : String(v); };
-  const h1 = OP_H1[rec.shift] || 5;
   const cur = opIsCurrent(rec);
-  const nowIdx = cur ? (opNowTunis().hour - h1 + 24) % 24 : -1;
+  const slots = opSlots(rec.shift);
+  const nowMin = cur ? opShiftNowMin(rec.shift) : -1;
+  let nowIdx = -1;
+  if(cur) slots.forEach((s, i) => { if(nowMin >= s.start && nowMin < s.end) nowIdx = i; });
   const tot = opTotals(rec);
   rec.hours_data.forEach((r, i) => {
     set('op-p' + i, rec.ref || '');
     set('op-d' + i, r.demand);
     const empty = (r.real === null || r.real === undefined);
-    const missing = empty && cur && i < nowIdx;
+    const missing = empty && cur && !!slots[i] && slots[i].end <= nowMin;
     const ra = document.getElementById('op-a' + i);
     if(ra){
       ra.textContent = empty ? (missing ? '\u00e0 saisir' : '') : String(r.real);
@@ -3136,7 +3741,10 @@ function opRefreshCells(){
     const tr = document.querySelector(`.op2-row[data-i="${i}"]`);
     if(tr) tr.classList.toggle('op2-now', i === nowIdx);
     const tag = document.getElementById('op-tag' + i);
-    if(tag) tag.textContent = i === nowIdx ? 'heure en cours' : '';
+    if(tag){
+      const note = r.brk ? `${r.work} min (pause ${r.brk})` : (r.work < 60 ? `${r.work} min` : '');
+      tag.textContent = [note, i === nowIdx ? 'heure en cours' : ''].filter(Boolean).join(' \u00b7 ');
+    }
   });
   set('op-t-dem', tot.demand); set('op-t-real', tot.real); set('op-t-rej', tot.rej);
   let demEntered = 0;
@@ -3160,15 +3768,20 @@ function opRefreshCells(){
 }
 
 const OP_TEAMS = [
-  { key: 'morning',   label: 'F1. \u00c9quipe Matin (5h \u2192 13h)' },
-  { key: 'afternoon', label: 'F2. \u00c9quipe Apr\u00e8s-midi (13h \u2192 21h)' },
-  { key: 'night',     label: 'F3. \u00c9quipe Nuit (21h \u2192 5h)' }
+  { key: 'morning',   label: 'F1. \u00c9quipe Matin (5h30 \u2192 13h15)' },
+  { key: 'afternoon', label: 'F2. \u00c9quipe Apr\u00e8s-midi (13h15 \u2192 21h00)' },
+  { key: 'night',     label: 'F3. \u00c9quipe Nuit (21h00 \u2192 5h30)' }
 ];
+function opCurrentSlotIdx(rec){
+  const slots = opSlots(rec.shift), m = opShiftNowMin(rec.shift);
+  let idx = -1;
+  slots.forEach((s, i) => { if(m >= s.start && m < s.end) idx = i; });
+  return idx;
+}
 
 function renderOpTable(main){
   const rec = state.opRec;
   if(!rec){ state.view = 'op-portal'; return render(); }
-  const h1 = OP_H1[rec.shift] || 5;
   const ro = opIsReadOnly(rec);
   const cur = opIsCurrent(rec);
   const fromHist = state.opFrom === 'history';
@@ -3180,6 +3793,7 @@ function renderOpTable(main){
     <div class="op2-crumbs"><a id="op-home">Accueil</a><span>\u203a</span><a id="op-back">${fromHist ? opT('history') : opT('portal')}</a><span>\u203a</span><b>${nameTxt}</b></div>
     <div class="op2-title"><span>Portail op\u00e9rateur : ${nameTxt}<span id="op-title-ref"></span></span>${ro ? `<span class="op2-ro">${opT('readonly')}</span>` : ''}</div>
     <div class="op2-body">
+      ${rec._virtual ? `<div style="background:#fff8e6;border:1px solid #f2c200;color:#6b4e00;border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:13px">${opT('emptyDay')}</div>` : ''}
       <div class="op2-sumwrap"><table class="op2-sum">
         <thead><tr><th>Line total</th><th>Demande</th><th>R\u00e9el</th><th>% R\u00e9el / Demande</th><th title="Avance (+) / Retard (\u2212) sur les heures saisies">AV / RE</th><th>Rejet</th><th>Taux de rejet %</th></tr></thead>
         <tbody>
@@ -3199,12 +3813,11 @@ function renderOpTable(main){
         </div>
         ${(!ro && cur) ? '<button type="button" class="op2-btn primary" id="op-now-btn">\u270e Saisir l\'heure en cours</button>' : ''}
       </div>
-      <div class="op2-pills">${Array.from({ length: 8 }, (_, i) => `<button type="button" class="op2-pill${rec.table_no === i + 1 ? ' on' : ''}" data-no="${i + 1}">T${opPad(i + 1)}</button>`).join('')}</div>
 
       <div class="op2-params">
-        <div><label for="op-name">Table</label><input type="text" id="op-name" value="${nameTxt}" readonly tabindex="-1"></div>
+        <div><label for="op-name">Table</label><select id="op-name">${Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}" ${rec.table_no === i + 1 ? 'selected' : ''}>Table de contr\u00f4le ${opPad(i + 1)}</option>`).join('')}</select></div>
         <div><label for="op-emp">Op\u00e9rateur</label><input type="text" id="op-emp" autocomplete="off" placeholder="Nom de l'op\u00e9rateur"></div>
-        <div><label for="op-ref">R\u00e9f\u00e9rence (ref)</label><input type="text" id="op-ref" autocomplete="off" placeholder="ref"></div>
+        <div><label for="op-ref">R\u00e9f\u00e9rence (ref)</label><input type="text" id="op-ref" autocomplete="off" placeholder="ref" list="op-ref-list"><datalist id="op-ref-list">${Object.values(state.opRefDem || {}).map(x => `<option value="${escHtml(x.ref)}"></option>`).join('')}</datalist></div>
         <div><label for="op-qty">Qtite (demande)</label><input type="number" id="op-qty" min="0" step="1" inputmode="numeric" placeholder="0"></div>
       </div>
 
@@ -3237,12 +3850,24 @@ function renderOpTable(main){
   if(ro){ refEl.disabled = true; qtyEl.disabled = true; empEl.disabled = true; }
   empEl.oninput = () => { if(!ro) rec.employee_name = empEl.value.trim(); };
   empEl.onchange = () => { if(!ro) opPersist(false); };
-  refEl.oninput = () => { if(ro) return; rec.ref = refEl.value.trim(); opRefreshCells(); };
+  refEl.oninput = () => {
+    if(ro) return;
+    rec.ref = refEl.value.trim();
+    /* Ref connue dans la liste Ref / Demande : la Qtite (demande) se remplit automatiquement */
+    const hit = (state.opRefDem || {})[opRefKey(rec.ref)];
+    if(hit){
+      rec.qty_total = hit.demande;
+      qtyEl.value = hit.demande ? String(hit.demande) : '';
+      const parts = opDistribute(rec.qty_total, rec.hours_data.map(r => r.work));
+      rec.hours_data.forEach((r, i) => { r.demand = parts[i]; });
+    }
+    opRefreshCells();
+  };
   refEl.onchange = () => { if(!ro) opPersist(false); };
   qtyEl.oninput = () => {
     if(ro) return;
     rec.qty_total = Math.max(0, Math.floor(Number(qtyEl.value) || 0));
-    const parts = opDistribute(rec.qty_total);
+    const parts = opDistribute(rec.qty_total, rec.hours_data.map(r => r.work));
     rec.hours_data.forEach((r, i) => { r.demand = parts[i]; });
     opRefreshCells();
   };
@@ -3262,7 +3887,7 @@ function renderOpTable(main){
   });
   main.querySelectorAll('.op2-edit').forEach(b => { b.onclick = (e) => { e.stopPropagation(); opOpenPopup(+b.dataset.i, ro); }; });
   const nowBtn = document.getElementById('op-now-btn');
-  if(nowBtn) nowBtn.onclick = () => opOpenPopup(Math.min(7, Math.max(0, (opNowTunis().hour - h1 + 24) % 24)), ro);
+  if(nowBtn) nowBtn.onclick = () => opOpenPopup(Math.max(0, opCurrentSlotIdx(rec)), ro);
 
   /* navigation : \u00e9quipe / date / table */
   document.getElementById('op-team').onchange = (e) => opNavigate(rec.sheet_date, e.target.value);
@@ -3270,7 +3895,7 @@ function renderOpTable(main){
   document.getElementById('op-dprev').onclick = () => opNavigate(opShiftDate(rec.sheet_date, -1), rec.shift);
   document.getElementById('op-dnext').onclick = () => opNavigate(opShiftDate(rec.sheet_date, 1), rec.shift);
   document.getElementById('op-dtoday').onclick = () => { const sh = opCurrentShift(); opNavigate(sh.date, sh.key); };
-  main.querySelectorAll('.op2-pill').forEach(b => { b.onclick = () => opSwitchTable(+b.dataset.no); });
+  document.getElementById('op-name').onchange = (e) => opSwitchTable(+e.target.value);
   document.getElementById('op-home').onclick = async () => { if(!ro) await opPersist(false); state.opRec = null; state.view = 'menu'; render(); };
   document.getElementById('op-back').onclick = async () => {
     if(!ro) await opPersist(false);
@@ -3361,68 +3986,114 @@ function opOpenPopup(i, ro){
   }
 }
 
-/* Historique : donn\u00e9es enregistr\u00e9es par jour, \u00e9quipe et heure */
 function opShiftName(key){ return opT(key === 'morning' ? 'sMorning' : key === 'afternoon' ? 'sAfter' : 'sNight'); }
 function opShiftDate(iso, delta){
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
 }
+/* ===== Historique : totaux de fin d'équipe, les 8 tables dans une seule liste ===== */
+const OP_SHIFT_ORDER = { morning: 1, afternoon: 2, night: 3 };
+async function opHistLoad(){
+  const f = state.opHF;
+  const { data, error } = await sb.from('op_tables').select('*').gte('sheet_date', f.from).lte('sheet_date', f.to).order('sheet_date', { ascending: false });
+  if(error) throw error;
+  state.opHRows = (data || []).map(r => {
+    const rec = opNormalize(Object.assign({}, r));
+    const a = opAgg([rec.hours_data]);
+    return {
+      rec, date: r.sheet_date, shift: r.shift, table: r.table_no, emp: r.employee_name || '', ref: r.ref || '',
+      dem: a.dem, real: a.real, av: a.av, n: a.n, rej: a.rej,
+      pr: a.dem > 0 ? a.real / a.dem * 100 : null, pj: a.real > 0 ? a.rej / a.real * 100 : null
+    };
+  });
+}
+function opHistFiltered(){
+  const f = state.opHF, q = (s) => (s || '').toLowerCase().trim();
+  return (state.opHRows || []).filter(r =>
+    (!f.shift || r.shift === f.shift) && (!f.table || String(r.table) === String(f.table)) &&
+    (!q(f.ref) || r.ref.toLowerCase().includes(q(f.ref))) && (!q(f.emp) || r.emp.toLowerCase().includes(q(f.emp)))
+  ).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (OP_SHIFT_ORDER[b.shift] - OP_SHIFT_ORDER[a.shift]) || (a.table - b.table)));
+}
+function opHistExport(rows){
+  if(!rows.length){ showToast(t('noExportData'), true); return; }
+  if(typeof XLSX === 'undefined'){ showToast('XLSX non charg\u00e9 \u2014 v\u00e9rifiez votre connexion internet', true); return; }
+  const out = rows.map(r => ({
+    'Date': r.date, '\u00c9quipe': `${opShiftName(r.shift)} (${opShiftLabel(r.shift)})`, 'Table': `Table de contr\u00f4le ${opPad(r.table)}`,
+    'Op\u00e9rateur': r.emp, 'Ref': r.ref, 'Demande': r.dem, 'R\u00e9el': r.real,
+    '% R\u00e9el / Demande': r.pr === null ? '' : Math.round(r.pr * 10) / 10, 'AV / RE': r.n ? r.av : '',
+    'Rejet': r.rej, 'Taux de rejet %': r.pj === null ? '' : Math.round(r.pj * 100) / 100
+  }));
+  const ws = XLSX.utils.json_to_sheet(out);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Historique');
+  XLSX.writeFile(wb, `historique_equipes_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast(t('exportedToast'));
+}
 function renderOpHistory(main){
-  const today = opCurrentShift().date;
-  const date = state.opHistDate || today;
-  state.opHistDate = date;
-  main.innerHTML = `<style>${OP_CSS}</style>
-    <div class="back-link" id="op-back" style="margin-bottom:14px;">${ICONS.back} ${opT('portal')}</div>
-    <div class="menu-head"><h1>${opT('history')}</h1><p>${opT('histSub')}</p></div>
-    <div class="op-hist-bar">
-      <button type="button" id="op-prev">&lsaquo;</button>
-      <input type="date" id="op-date">
-      <button type="button" id="op-next">&rsaquo;</button>
-      <button type="button" id="op-today">${opT('today')}</button>
+  if(!state.opHF){
+    const td = opCurrentShift().date;
+    state.opHF = { from: opShiftDate(td, -13), to: td, shift: '', table: '', ref: '', emp: '' };
+  }
+  const f = state.opHF;
+  main.innerHTML = `<style>${OP_CSS}${OP2_CSS}</style>
+    <div class="page-head"><h2>${opT('history')} &mdash; totaux par \u00e9quipe</h2><div class="back-link" id="op-back">${ICONS.back} ${opT('portal')}</div></div>
+    <div class="toolbar op-hf">
+      <label>Du</label><input type="date" id="op-hf-from" value="${escHtml(f.from)}">
+      <label>Au</label><input type="date" id="op-hf-to" value="${escHtml(f.to)}">
+      <select id="op-hf-shift"><option value="">Toutes les \u00e9quipes</option>${OP_TEAMS.map(t2 => `<option value="${t2.key}" ${f.shift === t2.key ? 'selected' : ''}>${t2.label}</option>`).join('')}</select>
+      <select id="op-hf-table"><option value="">Toutes les tables</option>${Array.from({ length: 8 }, (_, i) => `<option value="${i + 1}" ${String(f.table) === String(i + 1) ? 'selected' : ''}>Table de contr\u00f4le ${opPad(i + 1)}</option>`).join('')}</select>
+      <input type="text" id="op-hf-ref" placeholder="Ref" value="${escAttr(f.ref)}" style="max-width:140px">
+      <input type="text" id="op-hf-emp" placeholder="Op\u00e9rateur" value="${escAttr(f.emp)}" style="max-width:160px">
+      <button class="btn blue" id="op-hf-export" style="width:auto;padding:9px 14px;">${ICONS.download} ${t('exportBtn')}</button>
     </div>
-    <div id="op-hist-body">${opT('loading')}</div>`;
-  const dateEl = document.getElementById('op-date');
-  dateEl.value = date;
-  const go = (d) => { if(!d) return; state.opHistDate = d; renderOpHistory(main); };
-  document.getElementById('op-back').onclick = () => { state.view = 'op-portal'; render(); };
-  document.getElementById('op-prev').onclick = () => go(opShiftDate(date, -1));
-  document.getElementById('op-next').onclick = () => go(opShiftDate(date, 1));
-  document.getElementById('op-today').onclick = () => go(today);
-  dateEl.onchange = () => go(dateEl.value);
-  (async () => {
-    const body = document.getElementById('op-hist-body');
-    try{
-      const { data, error } = await sb.from('op_tables').select('*').eq('sheet_date', date);
-      if(error) throw error;
-      const rows = data || [];
-      if(!document.getElementById('op-hist-body')) return;
-      body.innerHTML = ['morning', 'afternoon', 'night'].map(sk => {
-        const h1 = OP_H1[sk];
-        const recs = rows.filter(r => r.shift === sk);
-        let real = 0, rej = 0, qty = 0;
-        recs.forEach(r => { qty += Number(r.qty_total) || 0; (r.hours_data || []).forEach(x => { real += Number(x.real) || 0; rej += Number(x.reject) || 0; }); });
-        const tiles = Array.from({ length: 8 }, (_, i) => {
-          const r = recs.find(x => x.table_no === i + 1);
-          if(!r) return `<div class="op-tile off"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div><div class="op-tile-stat">&mdash;</div></div>`;
-          let rr = 0, jj = 0;
-          (r.hours_data || []).forEach(x => { rr += Number(x.real) || 0; jj += Number(x.reject) || 0; });
-          const tm = r.updated_at ? new Date(r.updated_at).toLocaleTimeString('fr-FR', { timeZone: 'Africa/Tunis', hour: '2-digit', minute: '2-digit' }) : '';
-          return `<div class="op-tile" data-no="${i + 1}" data-shift="${sk}"><div class="op-tile-name">Table de contr\u00f4le ${opPad(i + 1)}</div>
-            <div class="op-tile-stat">${escHtml(r.ref || '')}${r.employee_name ? ' &middot; ' + escHtml(r.employee_name) : ''}<br>R\u00e9el ${rr} / Qtite ${Number(r.qty_total) || 0} &middot; Rejet ${jj}<br>${opT('last')} ${tm}</div></div>`;
-        }).join('');
-        return `<div class="op-sec"><h3>${opShiftName(sk)} &mdash; ${opShiftLabel(h1)}</h3>
-          <p class="op-sec-tot">${opT('teamTot')} : R\u00e9el ${real} / Qtite ${qty} &middot; Rejet ${rej}</p>
-          <div class="op-tiles">${tiles}</div></div>`;
-      }).join('');
-      body.querySelectorAll('.op-tile[data-no]').forEach(el => {
-        el.onclick = () => opOpenTable(+el.dataset.no, { date, shift: el.dataset.shift, from: 'history' });
-      });
-    }catch(e){
-      console.error('op history error:', e);
-      body.textContent = '';
-      showToast(`${opT('err')}: ${opErrMsg(e)}`, true);
+    <div class="table-wrap"><table class="op-ht">
+      <thead><tr><th>Date</th><th>\u00c9quipe</th><th>Table</th><th>Op\u00e9rateur</th><th>Ref</th><th>Demande</th><th>R\u00e9el</th><th>% R\u00e9el / Demande</th><th>AV / RE</th><th>Rejet</th><th>Taux de rejet %</th></tr></thead>
+      <tbody id="op-hbody"><tr><td colspan="11" class="empty-state">${opT('loading')}</td></tr></tbody>
+      <tfoot id="op-hfoot"></tfoot>
+    </table></div>
+    <p class="op-hint">Touchez une ligne pour ouvrir la feuille de l'\u00e9quipe.</p>`;
+
+  const fill = () => {
+    const rows = opHistFiltered();
+    const pct = (v) => v === null ? '\u2014' : (Math.round(v * 10) / 10) + ' %';
+    const rateCls = (v) => v === null ? '' : (v <= OP_REJ_OK ? 'good' : v <= OP_REJ_WARN ? 'warn' : 'bad');
+    const body = document.getElementById('op-hbody');
+    if(!rows.length){
+      body.innerHTML = `<tr><td colspan="11" class="empty-state">${opT('noData')}</td></tr>`;
+      document.getElementById('op-hfoot').innerHTML = '';
+      return rows;
     }
-  })();
+    body.innerHTML = rows.map((r, i) => `<tr class="op-hrow" data-i="${i}">
+      <td>${escHtml(r.date)}</td><td>${opShiftName(r.shift)}</td><td>T${opPad(r.table)}</td><td>${escHtml(r.emp)}</td><td>${escHtml(r.ref)}</td>
+      <td class="num">${r.dem}</td><td class="num">${r.real}</td><td class="num">${pct(r.pr)}</td>
+      <td class="num ${r.n ? (r.av < 0 ? 'bad' : 'good') : ''}">${r.n ? (r.av > 0 ? '+' + r.av : r.av) : '\u2014'}</td>
+      <td class="num">${r.rej}</td><td class="num ${rateCls(r.pj)}">${r.pj === null ? '\u2014' : (Math.round(r.pj * 100) / 100).toFixed(2) + '%'}</td></tr>`).join('');
+    let dem = 0, real = 0, rej = 0, av = 0, n = 0;
+    rows.forEach(r => { dem += r.dem; real += r.real; rej += r.rej; av += r.av; n += r.n; });
+    const pr = dem > 0 ? real / dem * 100 : null, pj = real > 0 ? rej / real * 100 : null;
+    document.getElementById('op-hfoot').innerHTML = `<tr><td colspan="5">Total (${rows.length} feuille${rows.length > 1 ? 's' : ''})</td>
+      <td class="num">${dem}</td><td class="num">${real}</td><td class="num">${pct(pr)}</td>
+      <td class="num ${n ? (av < 0 ? 'bad' : 'good') : ''}">${n ? (av > 0 ? '+' + av : av) : '\u2014'}</td><td class="num">${rej}</td>
+      <td class="num ${rateCls(pj)}">${pj === null ? '\u2014' : (Math.round(pj * 100) / 100).toFixed(2) + '%'}</td></tr>`;
+    body.querySelectorAll('.op-hrow').forEach(tr => {
+      tr.onclick = () => { const r = rows[+tr.dataset.i]; opOpenTable(r.table, { date: r.date, shift: r.shift, from: 'history' }); };
+    });
+    return rows;
+  };
+  const reload = async () => {
+    try{ await opHistLoad(); }
+    catch(e){ console.error('op history error:', e); showToast(`${opT('err')}: ${opErrMsg(e)}`, true); state.opHRows = []; }
+    fill();
+  };
+  document.getElementById('op-back').onclick = () => { state.view = 'op-portal'; render(); };
+  document.getElementById('op-hf-from').onchange = (e) => { f.from = e.target.value || f.from; reload(); };
+  document.getElementById('op-hf-to').onchange = (e) => { f.to = e.target.value || f.to; reload(); };
+  document.getElementById('op-hf-shift').onchange = (e) => { f.shift = e.target.value; fill(); };
+  document.getElementById('op-hf-table').onchange = (e) => { f.table = e.target.value; fill(); };
+  document.getElementById('op-hf-ref').oninput = (e) => { f.ref = e.target.value; fill(); };
+  document.getElementById('op-hf-emp').oninput = (e) => { f.emp = e.target.value; fill(); };
+  document.getElementById('op-hf-export').onclick = () => opHistExport(opHistFiltered());
+  reload();
 }
 
 /* ================= EXPORT EXCEL (Stock) ================= */
@@ -3461,15 +4132,6 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
 
 
