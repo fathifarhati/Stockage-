@@ -647,6 +647,7 @@ function slugFolder(name){
 }
 async function listPdfEntries(folder){
   const { data, error } = await sb.storage.from(currentBucket()).list(folder, { sortBy: { column:'name', order:'asc' } });
+  if(error) showToast(`Stockage « ${currentBucket()} » : ${error.message}`, true);
   state.pdfFiles = error ? [] : (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
 }
 async function uploadPdfFile(folder, file){
@@ -860,7 +861,7 @@ function render(){
   const roleNow = state.currentUser && state.currentUser.role;
   if(roleNow === 'entrepreneur') nav.splice(0, nav.length, ['op-portal','▥',t('cardOpTitle')],['qc-data','◇',t('cardQcDataTitle')]);
   if(roleNow === 'employee') nav.splice(0, nav.length, ['qc-entry','◇',t('moduleQcTitle')],['op-portal','▥',t('cardOpTitle')]);
-  const activeView = state.view === 'dashboard' ? 'analytics-hub' : state.view;
+  const activeView = state.view === 'dashboard' ? 'analytics-hub' : (state.view === 'pdf-library' && state.currentLibrary === 'bonnequalite') ? 'pdf-bq' : state.view;
   app.innerHTML = `<div class="workspace-shell">
     <aside class="workspace-sidebar">
       <div class="workspace-brand"><span class="workspace-brand-mark">⌁</span><span>Gestion de Stock<small>Industrial Management</small></span></div>
@@ -4132,6 +4133,7 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
+
 
 
 
