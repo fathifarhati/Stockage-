@@ -328,6 +328,17 @@ body:has(.workspace-shell){background:#070c16;color:#e7edf8;}
 @media(max-width:850px){.workspace-shell{grid-template-columns:190px minmax(0,1fr)}.workspace-content{padding:18px 15px}.workspace-topbar{padding:10px 15px}}
 @media(max-width:620px){.workspace-shell{grid-template-columns:1fr}.workspace-sidebar{min-height:auto;padding:10px;border-right:0;border-bottom:1px solid #202b3c}.workspace-brand{padding:4px 6px 12px;margin-bottom:10px}.workspace-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.workspace-nav button{padding:9px 8px;font-size:12px}.workspace-logout-wrap{margin-top:10px;padding-top:8px}.workspace-topbar{height:auto;min-height:62px}.workspace-search{max-width:180px}.workspace-user-name{max-width:100px}.workspace-content{padding:15px 10px}.workspace-content .analytics-shell{padding:14px}.analytics-shell .an-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-shell .an-layout{grid-template-columns:1fr}}
 
+
+/* ===== Pleine largeur sur grand écran ===== */
+html,body{width:100%;max-width:none;margin:0;}
+#app{width:100%;max-width:none;align-items:stretch;}
+.workspace-shell{width:100%!important;max-width:none!important;margin:0!important;}
+.workspace-main,.workspace-content{width:100%;max-width:none!important;margin:0!important;}
+.workspace-content .analytics-shell{width:100%;max-width:none!important;margin:0!important;}
+/* barre de dates : thème sombre */
+.workspace-content .dash-bar{background:#101722;border-color:#263247;color:#e8eef9;}
+.workspace-content .dash-bar button{background:#141e2d;border-color:#2a3850;color:#e8eef9;}
+.workspace-content .dash-bar button.on{background:#0f9f8f;border-color:#0f9f8f;color:#fff;}
 </style>
 
 </head>
@@ -4133,6 +4144,7 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
+
 
 
 
