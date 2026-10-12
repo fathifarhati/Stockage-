@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -339,6 +341,20 @@ html,body{width:100%;max-width:none;margin:0;}
 .workspace-content .dash-bar{background:#101722;border-color:#263247;color:#e8eef9;}
 .workspace-content .dash-bar button{background:#141e2d;border-color:#2a3850;color:#e8eef9;}
 .workspace-content .dash-bar button.on{background:#0f9f8f;border-color:#0f9f8f;color:#fff;}
+
+/* ===== Mise en page fixe : barre latérale et barre du haut fixes, seul le contenu défile ===== */
+html:has(.workspace-shell),body:has(.workspace-shell){height:100vh;height:100dvh;overflow:hidden;}
+body:has(.workspace-shell) #app{height:100vh;height:100dvh;min-height:0;}
+.workspace-shell{height:100vh;height:100dvh;min-height:0;overflow:hidden;}
+.workspace-sidebar{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;}
+.workspace-main{height:100%;min-height:0;overflow:hidden;}
+.workspace-topbar{flex:0 0 auto;}
+.workspace-content{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+@media(max-width:620px){
+  .workspace-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);}
+  .workspace-sidebar{height:auto;max-height:34vh;min-height:0;overflow-y:auto;}
+  .workspace-main{height:100%;}
+}
 </style>
 
 </head>
@@ -4144,7 +4160,6 @@ function showToast(msg, isError){
 </script>
 </body>
 </html>
-
 
 
 
